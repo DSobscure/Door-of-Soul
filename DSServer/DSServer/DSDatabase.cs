@@ -305,22 +305,51 @@ namespace DSServer
                 if (connection.State == System.Data.ConnectionState.Closed)
                     connection.Open();
 
-                String sqlText = "SELECT UniqueID,Name FROM soul WHERE AnswerUniqueID = @answerUniqueID";
+                String sqlText = "SELECT UniqueID,Name,MainContainerUniqueID FROM soul WHERE AnswerUniqueID = @answerUniqueID";
                 using (MySqlCommand cmd = new MySqlCommand(sqlText, connection))
                 {
                     cmd.Parameters.AddWithValue("@answerUniqueID", answerUniqueID);
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
-                        if (reader.Read())
+                        List<SerializableSoul> soulList = new List<SerializableSoul>();
+                        while(reader.Read())
                         {
-                            List<SerializableSoul> soulList = new List<SerializableSoul>();
-                            soulList.Add(new SerializableSoul(reader.GetInt32(0), reader.GetString(1)));
-                            return soulList.ToArray();
+                            soulList.Add(new SerializableSoul(reader.GetInt32(0), reader.GetString(1),reader.GetInt32(2)));
                         }
-                        else
+                        return soulList.ToArray();
+                    }
+                }
+            }
+            catch (Exception EX)
+            {
+                throw EX;
+            }
+            finally
+            {
+                if (connection.State == System.Data.ConnectionState.Open)
+                    connection.Close();
+            }
+        }
+
+        public SerializableContainer[] GetContainerList(int soulUniqueID)
+        {
+            try
+            {
+                if (connection.State == System.Data.ConnectionState.Closed)
+                    connection.Open();
+
+                String sqlText = "SELECT UniqueID,Name,LocationUniqueID,PositionX,PositionY,PositionZ FROM container WHERE SoulUniqueID = @soulUniqueID";
+                using (MySqlCommand cmd = new MySqlCommand(sqlText, connection))
+                {
+                    cmd.Parameters.AddWithValue("@soulUniqueID", soulUniqueID);
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        List<SerializableContainer> containerList = new List<SerializableContainer>();
+                        while (reader.Read())
                         {
-                            return null;
+                            containerList.Add(new SerializableContainer(reader.GetInt32(0), reader.GetString(1), reader.GetInt32(2),reader.GetFloat(3),reader.GetFloat(4),reader.GetFloat(5)));
                         }
+                        return containerList.ToArray();
                     }
                 }
             }

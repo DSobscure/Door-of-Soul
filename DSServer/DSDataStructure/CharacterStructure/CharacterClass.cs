@@ -13,15 +13,17 @@ namespace DSDataStructure
         public int UniqueID { get; protected set; }
         public string Name { get; set; }
         public int SoulLimit { get; protected set; }
-        public List<Soul> SoulList { get; set; }
+        public Dictionary<int,Soul> SoulDictionary { get; set; }
         public DSPeer Peer;
+        public int MainSoulUniqueID { get; set; }
 
-        public Answer(int uniqueID, string name, int soulLimit,DSPeer peer)
+        public Answer(int uniqueID, string name, int soulLimit, int mainSoulUniqueID, DSPeer peer)
         {
             UniqueID = uniqueID;
             Name = name;
             SoulLimit = soulLimit;
-            SoulList = new List<Soul>();
+            MainSoulUniqueID = mainSoulUniqueID;
+            SoulDictionary = new Dictionary<int, Soul>();
             Peer = peer;
         }
 
@@ -30,13 +32,14 @@ namespace DSDataStructure
             UniqueID = answer.UniqueID;
             Name = answer.Name;
             SoulLimit = answer.SoulLimit;
-            SoulList = new List<Soul>();
+            MainSoulUniqueID = answer.MainSoulUniqueID;
+            SoulDictionary = new Dictionary<int, Soul>();
             Peer = peer;
         }
 
         public SerializableAnswer Serialize()
         {
-            return new SerializableAnswer(UniqueID, Name, SoulLimit);
+            return new SerializableAnswer(UniqueID, Name, SoulLimit, MainSoulUniqueID);
         }
     }
 
@@ -44,28 +47,32 @@ namespace DSDataStructure
     {
         public int UniqueID { get; protected set; }
         public string Name { get; set; }
-        public List<Container> ContainerList { get; set; }
+        public Dictionary<int, Container> ContainerDictionary { get; set; }
         public Answer SourceAnswer { get; protected set; }
+        public int MainContainerUniqueID { get; set; }
+        public bool Active { get; set; }
 
-        public Soul(int uniqueID, string name, Answer sourceAnswer)
+        public Soul(int uniqueID, string name, int mainContainerUniqueID, Answer sourceAnswer)
         {
             UniqueID = uniqueID;
             Name = name;
+            MainContainerUniqueID = mainContainerUniqueID;
             SourceAnswer = sourceAnswer;
-            ContainerList = new List<Container>();
+            ContainerDictionary = new Dictionary<int,Container>();
         }
 
         public Soul(SerializableSoul soul, Answer sourceAnswer)
         {
             UniqueID = soul.UniqueID;
             Name = soul.Name;
+            MainContainerUniqueID = soul.MainContainerUniqueID;
             SourceAnswer = sourceAnswer;
-            ContainerList = new List<Container>();
+            ContainerDictionary = new Dictionary<int,Container>();
         }
 
         public SerializableSoul Serialize()
         {
-            return new SerializableSoul(UniqueID, Name);
+            return new SerializableSoul(UniqueID, Name, MainContainerUniqueID);
         }
     }
 
@@ -73,7 +80,7 @@ namespace DSDataStructure
     {
         public int UniqueID { get; protected set; }
         public string Name { get; set; }
-        public List<Soul> SoulList { get; set; }
+        public Dictionary<int, Soul> SoulDictionary { get; set; }
         public Scene Location { get; set; }
 
         public float PositionX { get; set; }
@@ -84,7 +91,7 @@ namespace DSDataStructure
         {
             UniqueID = uniqueID;
             Name = name;
-            SoulList = new List<Soul>();
+            SoulDictionary = new Dictionary<int,Soul>();
             Location = location;
             PositionX = postionX;
             PositionY = positionY;
@@ -95,7 +102,7 @@ namespace DSDataStructure
         {
             UniqueID = container.UniqueID;
             Name = container.Name;
-            SoulList = new List<Soul>();
+            SoulDictionary = new Dictionary<int,Soul>();
             Location = location;
             PositionX = container.PositionX;
             PositionY = container.PositionY;
@@ -104,7 +111,7 @@ namespace DSDataStructure
 
         public SerializableContainer Serialize()
         {
-            return new SerializableContainer(UniqueID, Name, PositionX, PositionY, PositionZ);
+            return new SerializableContainer(UniqueID, Name, Location.UniqueID, PositionX, PositionY, PositionZ);
         }
     }
 }

@@ -10,6 +10,7 @@ using ExitGames.Logging.Log4Net;
 using log4net.Config;
 using DSDataStructure.WorldLevelStructure;
 using DSDataStructure;
+using DSProtocol;
 
 namespace DSServer
 {
@@ -53,11 +54,27 @@ namespace DSServer
             {
                 Log.Info("Database Connect successiful!.......");
             }
+
+            InitialWorldGraph();
         }
 
         protected override void TearDown()
         {
             database.Dispose(); 
+        }
+
+        public void Broadcast(Answer[] answers, BroadcastType broadcastType, Dictionary<byte, object> parameter)
+        {
+            EventData eventData = new EventData((byte)broadcastType, parameter);
+            foreach (Answer answer in answers)
+            {
+                answer.Peer.SendEvent(eventData, new SendParameters());
+            }
+        }
+
+        private void InitialWorldGraph()
+        {
+            SceneDictionary.Add(1,new Scene(1,"testScene",null));
         }
     }
 }

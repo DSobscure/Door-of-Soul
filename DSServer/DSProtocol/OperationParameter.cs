@@ -11,6 +11,11 @@
         AnswerUniqueID
     }
 
+    public enum GetContainerListParameterItem
+    {
+        SoulUniqueID
+    }
+
     public enum ActiveSoulParameterItem
     {
         SoulUniqueID

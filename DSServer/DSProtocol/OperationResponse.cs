@@ -7,8 +7,12 @@
 
     public enum GetSoulListResponseItem
     {
-        SoulListDataString,
-        SoulLimit
+        SoulListDataString
+    }
+
+    public enum GetContainerListResponseItem
+    {
+        ContainerListDataString
     }
 
     public enum GetSceneDataResponseItem

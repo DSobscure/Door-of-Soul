@@ -6,21 +6,24 @@ public class Answer
     public int UniqueID { get; protected set; }
     public string Name { get; set; }
     public int SoulLimit { get; protected set; }
-    public List<Soul> SoulList { get; set; }
+    public Dictionary<int,Soul> SoulDictionary { get; set; }
+    public int MainSoulUniqueID { get; set; }
 
-    public Answer(int uniqueID, string name, int soulLimit)
+    public Answer(int uniqueID, string name, int soulLimit, int mainSoulUniqueID)
     {
         UniqueID = uniqueID;
         Name = name;
         SoulLimit = soulLimit;
-        SoulList = new List<Soul>();
+        MainSoulUniqueID = mainSoulUniqueID;
+        SoulDictionary = new Dictionary<int, Soul>();
     }
 
     public Answer(SerializableAnswer answer)
     {
         UniqueID = answer.UniqueID;
         Name = answer.Name;
+        MainSoulUniqueID = answer.MainSoulUniqueID;
         SoulLimit = answer.SoulLimit;
-        SoulList = new List<Soul>();
+        SoulDictionary = new Dictionary<int, Soul>();
     }
 }

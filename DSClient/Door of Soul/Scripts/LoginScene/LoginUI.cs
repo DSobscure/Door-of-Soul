@@ -45,8 +45,7 @@ public class LoginUI : MonoBehaviour {
                 else
                 {
                     PhotonGlobal.PS.OpenDSEvent -= OpenDSEventAction;
-                    GUI.Label(new Rect(30, 70, 80, 20), AnswerGlobal.Answer.Name);
-                    //Application.LoadLevel("testScene");
+                    Application.LoadLevel("EnterWorldGraphScene");
                 }
             }
             else

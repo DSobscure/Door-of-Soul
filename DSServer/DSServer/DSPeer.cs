@@ -11,6 +11,7 @@ using DSProtocol;
 using DSSerializable.CharacterStructure;
 using System.IO;
 using DSSerializable;
+using DSDataStructure.WorldLevelStructure;
 
 namespace DSServer
 {
@@ -19,7 +20,7 @@ namespace DSServer
         private static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         public Guid guid { get; set; }
         private DSServer server;
-        public Answer answer { get; set; }
+        public Answer Answer { get; set; }
 
         public DSPeer(IRpcProtocol rpcprotocol,IPhotonPeer nativePeer,DSServer serverApplication) : base(rpcprotocol,nativePeer)
         {
@@ -33,13 +34,13 @@ namespace DSServer
             {
                 server.WandererDictionary.Remove(guid);
             }
-            if(server.AnswerDictionary.ContainsKey(answer.UniqueID))
+            if(server.AnswerDictionary.ContainsKey(Answer.UniqueID))
             {
-                server.AnswerDictionary.Remove(answer.UniqueID);
+                server.AnswerDictionary.Remove(Answer.UniqueID);
             }
-            foreach(Soul soul in answer.SoulList)
+            foreach(Soul soul in Answer.SoulDictionary.Values)
             {
-                foreach(Container container in soul.ContainerList)
+                foreach(Container container in soul.ContainerDictionary.Values)
                 {
                     if(server.ContainerDictionary.ContainsKey(container.UniqueID))
                     {
@@ -73,18 +74,18 @@ namespace DSServer
                     break;
                 #endregion
 
-                #region active soul
-                case (byte)OperationType.ActiveSoul:
+                #region get container list
+                case (byte)OperationType.GetContainerList:
                     {
-                        ActiveSoulTask(operationRequest);
+                        GetContainerListTask(operationRequest);
                     }
                     break;
                 #endregion
 
-                #region get scene data
-                case (byte)OperationType.GetSceneData:
+                #region active soul
+                case (byte)OperationType.ActiveSoul:
                     {
-                        GetSceneDataTask(operationRequest);
+                        ActiveSoulTask(operationRequest);
                     }
                     break;
                 #endregion
@@ -96,6 +97,14 @@ namespace DSServer
                     }
                     break;
                 #endregion
+
+                #region get scene data
+                case (byte)OperationType.GetSceneData:
+                    {
+                        GetSceneDataTask(operationRequest);
+                    }
+                    break;
+                #endregion              
             }
         }
 
@@ -125,7 +134,7 @@ namespace DSServer
                         {
                             Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)OpenDSResponseItem.AnswerDataString,SerializeFunction.SerializeObject(answer.Serialize())}
+                                            {(byte)OpenDSResponseItem.AnswerDataString,SerializeFunction.SerializeObject(Answer.Serialize())}
                                         };
 
                             OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
@@ -181,7 +190,7 @@ namespace DSServer
             else
             {
                 int answerUniqueID = (int)operationRequest.Parameters[(byte)GetSoulListParameterItem.AnswerUniqueID];
-                if(answerUniqueID != answer.UniqueID)
+                if(answerUniqueID != Answer.UniqueID)
                 {
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode)
                     {
@@ -196,8 +205,49 @@ namespace DSServer
                     FillSoulData(soulList);
                     Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)GetSoulListResponseItem.SoulLimit,answer.SoulLimit},
                                             {(byte)GetSoulListResponseItem.SoulListDataString,SerializeFunction.SerializeObject(soulList)}
+                                        };
+
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
+                    {
+                        ReturnCode = (short)ErrorType.Correct,
+                        DebugMessage = ""
+                    };
+
+                    SendOperationResponse(response, new SendParameters());
+                }
+            }
+        }
+        private void GetContainerListTask(OperationRequest operationRequest)
+        {
+            if (operationRequest.Parameters.Count != 1)
+            {
+                OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                {
+                    ReturnCode = (short)ErrorType.InvalidParameter,
+                    DebugMessage = "GetContainerList Parameter Error"
+                };
+                this.SendOperationResponse(response, new SendParameters());
+            }
+            else
+            {
+                int soulUniqueID = (int)operationRequest.Parameters[(byte)GetContainerListParameterItem.SoulUniqueID];
+                if (!Answer.SoulDictionary.ContainsKey(soulUniqueID))
+                {
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.PermissionDeny,
+                        DebugMessage = "The soul is not yours"
+                    };
+                    this.SendOperationResponse(response, new SendParameters());
+                }
+                else
+                {
+                    SerializableContainer[] containerList = server.database.GetContainerList(soulUniqueID);
+                    FillContainerData(soulUniqueID,containerList);
+                    Dictionary<byte, object> parameter = new Dictionary<byte, object>
+                                        {
+                                            {(byte)GetContainerListResponseItem.ContainerListDataString,SerializeFunction.SerializeObject(containerList)}
                                         };
 
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
@@ -212,37 +262,149 @@ namespace DSServer
         }
         private void ActiveSoulTask(OperationRequest operationRequest)
         {
-
-        }
-        private void GetSceneDataTask(OperationRequest operationRequest)
-        {
-
+            if (operationRequest.Parameters.Count != 1)
+            {
+                OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                {
+                    ReturnCode = (short)ErrorType.InvalidParameter,
+                    DebugMessage = "ActiveSoul Parameter Error"
+                };
+                this.SendOperationResponse(response, new SendParameters());
+            }
+            else
+            {
+                int soulUniqueID = (int)operationRequest.Parameters[(byte)ActiveSoulParameterItem.SoulUniqueID];
+                if (!Answer.SoulDictionary[soulUniqueID].Active)
+                {
+                    Answer.SoulDictionary[soulUniqueID].Active = true;
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.Correct,
+                        DebugMessage = ""
+                    };
+                    SendOperationResponse(response, new SendParameters());
+                    server.Broadcast(server.AnswerDictionary.Values.ToArray(), BroadcastType.ActiveSoul, operationRequest.Parameters);
+                }
+                else
+                {
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.InvalidOperation,
+                        DebugMessage = "靈魂已顯現"
+                    };
+                    this.SendOperationResponse(response, new SendParameters());
+                }
+            }
         }
         private void ProjectToSceneTask(OperationRequest operationRequest)
         {
+            if (operationRequest.Parameters.Count != 2)
+            {
+                OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                {
+                    ReturnCode = (short)ErrorType.InvalidParameter,
+                    DebugMessage = "ProjectToScene Parameter Error"
+                };
+                this.SendOperationResponse(response, new SendParameters());
+            }
+            else
+            {
+                int containerUniqueID = (int)operationRequest.Parameters[(byte)ProjectToSceneParameterItem.ContainerUniqueID];
+                int sceneUniqueID = (int)operationRequest.Parameters[(byte)ProjectToSceneParameterItem.SceneUniqueID];
 
+                if (server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
+                {
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.InvalidOperation,
+                        DebugMessage = "場景已存在該容器"
+                    };
+                    this.SendOperationResponse(response, new SendParameters());
+                }
+                else
+                {
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.Correct,
+                        DebugMessage = ""
+                    };
+
+                    SendOperationResponse(response, new SendParameters());
+                    Container container = Answer.SoulDictionary.First(pair => pair.Value.ContainerDictionary.ContainsKey(containerUniqueID)).Value.ContainerDictionary[containerUniqueID];
+                    ProjectContainerToScene(container, server.SceneDictionary[sceneUniqueID]);
+                }
+            }
         }
+        private void GetSceneDataTask(OperationRequest operationRequest)
+        {
+            if (operationRequest.Parameters.Count != 1)
+            {
+                OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                {
+                    ReturnCode = (short)ErrorType.InvalidParameter,
+                    DebugMessage = "GetSceneData Parameter Error"
+                };
+                this.SendOperationResponse(response, new SendParameters());
+            }
+            else
+            {
+                int sceneUniqueID = (int)operationRequest.Parameters[(byte)GetSceneDataParameterItem.SceneUniqueID];
+                if (!server.SceneDictionary.ContainsKey(sceneUniqueID))
+                {
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.NotExist,
+                        DebugMessage = "Scene not exist"
+                    };
+                    this.SendOperationResponse(response, new SendParameters());
+                }
+                else
+                {
+                    List<SerializableContainer> containerList = new List<SerializableContainer>();
+                    foreach(Container container in server.SceneDictionary[sceneUniqueID].ContainerDictionary.Values)
+                    {
+                        containerList.Add(container.Serialize());
+                    }
+                    Dictionary<byte, object> parameter = new Dictionary<byte, object>
+                                        {
+                                            {(byte)GetSceneDataResponseItem.SceneDataString,SerializeFunction.SerializeObject(server.SceneDictionary[sceneUniqueID].Serialize())},
+                                            {(byte)GetSceneDataResponseItem.ContainersDataString,SerializeFunction.SerializeObject(containerList.ToArray())}
+                                        };
+
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
+                    {
+                        ReturnCode = (short)ErrorType.Correct,
+                        DebugMessage = ""
+                    };
+
+                    SendOperationResponse(response, new SendParameters());
+                }
+            }
+        }
+        
 
         //Action
         public bool OpenDS(int answerUniqueID)
         {
-            string[]  requestItem = new string[2];
+            string[]  requestItem = new string[3];
             requestItem[0] = "Name";
             requestItem[1] = "SoulLimit";
+            requestItem[2] = "MainSoulUniqueID";
 
-            TypeCode[] requestType = new TypeCode[2];
+            TypeCode[] requestType = new TypeCode[3];
             requestType[0] = TypeCode.String;
             requestType[1] = TypeCode.Int32;
+            requestType[2] = TypeCode.Int32;
 
             object[] returnData = server.database.GetDataByUniqueID(answerUniqueID, requestItem, requestType, "answer");
 
-            answer = new Answer(answerUniqueID, (string)returnData[0], (int)returnData[1],this);
+            Answer = new Answer(answerUniqueID, (string)returnData[0], (int)returnData[1], (int)returnData[2],this);
 
             if (server.WandererDictionary.ContainsKey(guid))
             {
                 server.WandererDictionary.Remove(guid);
             }
-            server.AnswerDictionary.Add(answerUniqueID,answer);
+            server.AnswerDictionary.Add(answerUniqueID,Answer);
             
             return true;
         }
@@ -250,8 +412,35 @@ namespace DSServer
         {
             foreach(SerializableSoul soul in soulList)
             {
-                answer.SoulList.Add(new Soul(soul, answer));
+                Answer.SoulDictionary.Add(soul.UniqueID,new Soul(soul, Answer));
             }
+        }
+        public void FillContainerData(int soulUniqueID, SerializableContainer[] containerList)
+        {
+            foreach(SerializableContainer container in containerList)
+            {
+                Container soulContainer = new Container(container, server.SceneDictionary[container.LocationUniqueID]);
+                soulContainer.SoulDictionary.Add(soulUniqueID,Answer.SoulDictionary[soulUniqueID]);
+                Answer.SoulDictionary[soulUniqueID].ContainerDictionary.Add(container.UniqueID, soulContainer);
+            }
+        }
+        public void ProjectContainerToScene(Container container, Scene scene)
+        {
+            scene.ContainerDictionary.Add(container.UniqueID, container);
+            Dictionary<byte, object> parameter = new Dictionary<byte, object>
+                                        {
+                                            {(byte)ProjectContainerBroadcastItem.SceneUniqueID,scene.UniqueID},
+                                            {(byte)ProjectContainerBroadcastItem.ContainerDataString,SerializeFunction.SerializeObject(container.Serialize())}
+                                        };
+            HashSet<Answer> targetAnswers = new HashSet<Answer>();
+            foreach(Container targetContainer in scene.ContainerDictionary.Values)
+            {
+                foreach(Soul targetSoul in targetContainer.SoulDictionary.Values)
+                {
+                    targetAnswers.Add(targetSoul.SourceAnswer);
+                }
+            }
+            server.Broadcast(targetAnswers.ToArray(),BroadcastType.ProjectContainer,parameter);
         }
     }
 }
