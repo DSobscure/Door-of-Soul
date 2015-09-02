@@ -89,6 +89,30 @@ public partial class PhotonService : IPhotonPeerListener
                 }
                 break;
             #endregion
+
+            #region disconnect
+            case (byte)BroadcastType.Disconnect:
+                {
+                    DisconnectEventTask(eventData);
+                }
+                break;
+            #endregion
+
+            #region container position update
+            case (byte)BroadcastType.ContainerPositionUpdate:
+                {
+                    ContainerPositionUpdateEventTask(eventData);
+                }
+                break;
+            #endregion
+
+            #region send move target position
+            case (byte)BroadcastType.SendMoveTargetPosition:
+                {
+                    SendMoveTargetPositionEventTask(eventData);
+                }
+                break;
+            #endregion
         }
     }
 
@@ -140,6 +164,14 @@ public partial class PhotonService : IPhotonPeerListener
             case (byte)OperationType.GetSceneData:
                 {
                     GetSceneDataTask(operationResponse);
+                }
+                break;
+            #endregion
+
+            #region send move target position
+            case (byte)OperationType.SendMoveTargetPosition:
+                {
+                    SendMoveTargetPositionTask(operationResponse);
                 }
                 break;
             #endregion
@@ -239,18 +271,86 @@ public partial class PhotonService : IPhotonPeerListener
             GetSceneDataEvent(false, operationResponse.DebugMessage, null,null);
         }
     }
+    private void SendMoveTargetPositionTask(OperationResponse operationResponse)
+    {
+        if (operationResponse.ReturnCode != (short)ErrorType.Correct)
+        {
+            DebugReturn(0, operationResponse.DebugMessage);
+        }
+    }
 
     //Event Task
-    public void ProjectContainerToSceneTask(EventData eventData)
+    private void ProjectContainerToSceneTask(EventData eventData)
     {
-        int sceneUniqueID = (int)eventData.Parameters[(byte)ProjectContainerBroadcastItem.SceneUniqueID];
-        SerializableContainer container =  SerializeFunction.DeserializeObject<SerializableContainer>((string)eventData.Parameters[(byte)ProjectContainerBroadcastItem.ContainerDataString]);
-        if(container.UniqueID != AnswerGlobal.MainContainer.UniqueID)
-            ProjectContainerToSceneEvent(sceneUniqueID, container);
+        if(eventData.Parameters.Count == 2)
+        {
+            int sceneUniqueID = (int)eventData.Parameters[(byte)ProjectContainerBroadcastItem.SceneUniqueID];
+            SerializableContainer container = SerializeFunction.DeserializeObject<SerializableContainer>((string)eventData.Parameters[(byte)ProjectContainerBroadcastItem.ContainerDataString]);
+            if (container.UniqueID != AnswerGlobal.MainContainer.UniqueID)
+                ProjectContainerToSceneEvent(sceneUniqueID, container);
+        }
+        else
+        {
+            Debug.Log("ProjectContainerToSceneTask parameter error");
+        }
     }
     private void ActiveSoulEventTask(EventData eventData)
     {
-        //not implement
+        if(eventData.Parameters.Count == 1)
+        {
+            //int soulUniqueID = (int)eventData.Parameters[(byte)ActiveSoulBroadcastItem.SoulUniqueID];
+            //ActiveSoulEvent(soulUniqueID);
+        }
+        else
+        {
+            Debug.Log("ActiveSoulEventTask parameter error");
+        }
+    }
+    private void DisconnectEventTask(EventData eventData)
+    {
+        if(eventData.Parameters.Count == 3)
+        {
+            int[] soulUniqueIDList = SerializeFunction.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.SoulUniqueIDListDataString]);
+            int[] sceneUniqueIDList = SerializeFunction.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.SceneUniqueIDListDataString]);
+            int[] containerUniqueIDList = SerializeFunction.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.ContainerUniqueIDListDataString]);
+            DisconnectEvent(soulUniqueIDList, sceneUniqueIDList, containerUniqueIDList);
+        }
+        else
+        {
+            Debug.Log("DisconnectEventTask parameter error");
+        }
+    }
+    private void ContainerPositionUpdateEventTask(EventData eventData)
+    {
+        if(eventData.Parameters.Count == 5)
+        {
+            int sceneUniqueID = (int)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.SceneUniqueID];
+            int containerUniqueID = (int)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.ContainerUniqueID];
+            float positionX = (float)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.PositionX];
+            float positionY = (float)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.PositionY];
+            float positionZ = (float)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.PositionZ];
+            UpdateContainerPositionEvent(sceneUniqueID, containerUniqueID, positionX, positionY, positionZ);
+        }
+        else
+        {
+            Debug.Log("ContainerPositionUpdateEventTask parameter error");
+        }
+    }
+    private void SendMoveTargetPositionEventTask(EventData eventData)
+    {
+        if(eventData.Parameters.Count == 5)
+        {
+            int sceneUniqueID = (int)eventData.Parameters[(byte)SendMoveTargetPositionBroadcastItem.SceneUniqueID];
+            int containerUniqueID = (int)eventData.Parameters[(byte)SendMoveTargetPositionBroadcastItem.ContainerUniqueID];
+            float positionX = (float)eventData.Parameters[(byte)SendMoveTargetPositionBroadcastItem.PositionX];
+            float positionY = (float)eventData.Parameters[(byte)SendMoveTargetPositionBroadcastItem.PositionY];
+            float positionZ = (float)eventData.Parameters[(byte)SendMoveTargetPositionBroadcastItem.PositionZ];
+            MoveTargetPositionEvent(sceneUniqueID, containerUniqueID, positionX, positionY, positionZ);
+        }
+        else
+        {
+            Debug.Log("SendMoveTargetPositionEventTask parameter error");
+        }
     }
 
     //內部函數區塊   主動行為
@@ -340,6 +440,25 @@ public partial class PhotonService : IPhotonPeerListener
                         };
 
             this.peer.OpCustom((byte)OperationType.GetSceneData, parameter, true, 0, true);
+        }
+        catch (Exception EX)
+        {
+            throw EX;
+        }
+    }
+    public void SendMoveTargetPosition(int sceneUniqueID,int containerUniqueID,Vector3 position)
+    {
+        try
+        {
+            var parameter = new Dictionary<byte, object> { 
+                             {(byte)SendMoveTargetPositionParameterItem.SceneUniqueID,sceneUniqueID},
+                             {(byte)SendMoveTargetPositionParameterItem.ContainerUniqueID,containerUniqueID},
+                             {(byte)SendMoveTargetPositionParameterItem.PositionX,position.x},
+                             {(byte)SendMoveTargetPositionParameterItem.PositionY,position.y},
+                             {(byte)SendMoveTargetPositionParameterItem.PositionZ,position.z}
+                        };
+
+            this.peer.OpCustom((byte)OperationType.SendMoveTargetPosition, parameter, true, 0, true);
         }
         catch (Exception EX)
         {

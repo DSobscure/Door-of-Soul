@@ -22,6 +22,7 @@ namespace DSServer
         public Dictionary<int, Scene> SceneDictionary { get; set; }
         public Dictionary<int, Container> ContainerDictionary { get; set; }
         public Dictionary<int, Answer> AnswerDictionary { get; set; }
+        public Dictionary<int, Scene> SceneAdministratorDictionary { get; set; }
         public DSDatabase database;
 
         protected override PeerBase CreatePeer(InitRequest initRequest)
@@ -46,6 +47,7 @@ namespace DSServer
             SceneDictionary = new Dictionary<int, Scene>();
             ContainerDictionary = new Dictionary<int, Container>();
             AnswerDictionary = new Dictionary<int, Answer>();
+            SceneAdministratorDictionary = new Dictionary<int, Scene>();
 
             Log.Info("Server Setup successiful!.......");
 
@@ -63,12 +65,12 @@ namespace DSServer
             database.Dispose(); 
         }
 
-        public void Broadcast(Answer[] answers, BroadcastType broadcastType, Dictionary<byte, object> parameter)
+        public void Broadcast(DSPeer[] peers, BroadcastType broadcastType, Dictionary<byte, object> parameter)
         {
             EventData eventData = new EventData((byte)broadcastType, parameter);
-            foreach (Answer answer in answers)
+            foreach (DSPeer peer in peers)
             {
-                answer.Peer.SendEvent(eventData, new SendParameters());
+                peer.SendEvent(eventData, new SendParameters());
             }
         }
 

@@ -31,4 +31,33 @@
         ContainerUniqueID,
         SceneUniqueID
     }
+
+    public enum ControlTheSceneParameterItem
+    {
+        AdministratorUniqueID,
+        SceneUniqueID
+    }
+
+    public enum ContainerMoveRequestParameterItem
+    {
+
+    }
+
+    public enum SendMoveTargetPositionParameterItem
+    {
+        SceneUniqueID,
+        ContainerUniqueID,
+        PositionX,
+        PositionY,
+        PositionZ
+    }
+
+    public enum ContainerPositionUpdateParameterItem
+    {
+        SceneUniqueID,
+        ContainerUniqueID,
+        PositionX,
+        PositionY,
+        PositionZ
+    }
 }

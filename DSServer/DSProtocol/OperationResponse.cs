@@ -20,4 +20,10 @@
         SceneDataString,
         ContainersDataString
     }
+
+    public enum ControlTheSceneResponseItem
+    {
+        SceneDataString,
+        ContainersDataString
+    }
 }

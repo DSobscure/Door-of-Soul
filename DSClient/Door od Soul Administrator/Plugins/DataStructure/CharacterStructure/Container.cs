@@ -6,7 +6,6 @@ public class Container
 {
     public int UniqueID { get; protected set; }
     public string Name { get; set; }
-    public Dictionary<int, Soul> SoulDictionary { get; set; }
     public int LocationUniqueID { get; set; }
     public GameObject GameObject { get; set; }
 
@@ -63,7 +62,6 @@ public class Container
     {
         UniqueID = uniqueID;
         Name = name;
-        SoulDictionary = new Dictionary<int, Soul>();
         LocationUniqueID = locationUniqueID;
         PositionX = postionX;
         PositionY = positionY;
@@ -74,7 +72,6 @@ public class Container
     {
         UniqueID = container.UniqueID;
         Name = container.Name;
-        SoulDictionary = new Dictionary<int,Soul>();
         LocationUniqueID = container.LocationUniqueID;
         PositionX = container.PositionX;
         PositionY = container.PositionY;

@@ -3,6 +3,10 @@
     public enum BroadcastType
     {
         ActiveSoul,
-        ProjectContainer
+        ProjectContainer,
+        Disconnect,
+        ContainerMove,
+        SendMoveTargetPosition,
+        ContainerPositionUpdate
     }
 }

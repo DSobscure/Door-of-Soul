@@ -9,8 +9,7 @@ public class EnterScene : MonoBehaviour {
 	// Use this for initialization
 	IEnumerator Start()
     {
-        AnswerGlobal.containerPrefab = ContainerPrefab;
-        PhotonGlobal.PS.GetSceneData(AnswerGlobal.MainContainer.LocationUniqueID);
+        SceneGlobal.containerPrefab = ContainerPrefab;
         Physics.IgnoreLayerCollision(8,8,true);
         yield return null;
     }

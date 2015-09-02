@@ -26,4 +26,16 @@ public partial class PhotonService
     //event
     public delegate void ProjectContainerToSceneEventHandler(int sceneUniqueID, SerializableContainer container);
     public event ProjectContainerToSceneEventHandler ProjectContainerToSceneEvent;
+
+    public delegate void ActiveSoulEventHandler(int soulUniqueID);
+    public event ActiveSoulEventHandler ActiveSoulEvent;
+
+    public delegate void DisconnectEventHandler(int[] soulUniqueIDList, int[] sceneUniqueIDList, int[] containerUniqueIDList);
+    public event DisconnectEventHandler DisconnectEvent;
+
+    public delegate void UpdateContainerPositionEventHandler(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ);
+    public event UpdateContainerPositionEventHandler UpdateContainerPositionEvent;
+
+    public delegate void MoveTargetPositionEventHandler(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ);
+    public event MoveTargetPositionEventHandler MoveTargetPositionEvent;
 }

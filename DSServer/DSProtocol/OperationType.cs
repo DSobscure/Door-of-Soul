@@ -8,5 +8,9 @@
         ActiveSoul,
         ProjectToScene,
         GetSceneData,
+        ControlTheScene,
+        ContainerMoveRequest,
+        SendMoveTargetPosition,
+        ContainerPositionUpdate
     }
 }
