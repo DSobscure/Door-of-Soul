@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Photon.SocketServer;
 using PhotonHostRuntimeInterfaces;
 using ExitGames.Logging;
 using DSDataStructure;
 using DSProtocol;
 using DSSerializable.CharacterStructure;
-using System.IO;
 using DSSerializable;
 using DSDataStructure.WorldLevelStructure;
 
@@ -268,11 +265,10 @@ namespace DSServer
                 }
                 else
                 {
-                    SerializableSoul[] soulList = server.database.GetSoulList(answerUniqueID);
-                    FillSoulData(soulList);
+                    string soulListDataString = RegisterSoulData(answerUniqueID);
                     Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)GetSoulListResponseItem.SoulListDataString,SerializeFunction.SerializeObject(soulList)}
+                                            {(byte)GetSoulListResponseItem.SoulListDataString,soulListDataString}
                                         };
 
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
@@ -310,11 +306,10 @@ namespace DSServer
                 }
                 else
                 {
-                    SerializableContainer[] containerList = server.database.GetContainerList(soulUniqueID);
-                    FillContainerData(soulUniqueID,containerList);
+                    string containerListDataString = RegisterContainerData(soulUniqueID);
                     Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)GetContainerListResponseItem.ContainerListDataString,SerializeFunction.SerializeObject(containerList)}
+                                            {(byte)GetContainerListResponseItem.ContainerListDataString,containerListDataString}
                                         };
 
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
@@ -341,22 +336,14 @@ namespace DSServer
             else
             {
                 int soulUniqueID = (int)operationRequest.Parameters[(byte)ActiveSoulParameterItem.SoulUniqueID];
-                if (!Answer.SoulDictionary[soulUniqueID].Active)
+                if (ActiveSoul_and_Broadcast(soulUniqueID,operationRequest.Parameters))
                 {
-                    Answer.SoulDictionary[soulUniqueID].Active = true;
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode)
                     {
                         ReturnCode = (short)ErrorType.Correct,
                         DebugMessage = ""
                     };
                     SendOperationResponse(response, new SendParameters());
-
-                    HashSet<DSPeer> peers = new HashSet<DSPeer>();
-                    foreach (Answer answer in server.AnswerDictionary.Values)
-                    {
-                        peers.Add(answer.Peer);
-                    }
-                    server.Broadcast(peers.ToArray(), BroadcastType.ActiveSoul, operationRequest.Parameters);
                 }
                 else
                 {
@@ -396,26 +383,23 @@ namespace DSServer
                 }
                 else
                 {
-                    if (server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
-                    {
-                        OperationResponse response = new OperationResponse(operationRequest.OperationCode)
-                        {
-                            ReturnCode = (short)ErrorType.InvalidOperation,
-                            DebugMessage = "場景已存在該容器"
-                        };
-                        this.SendOperationResponse(response, new SendParameters());
-                    }
-                    else
+                    if (ProjectToScene(sceneUniqueID,containerUniqueID))
                     {
                         OperationResponse response = new OperationResponse(operationRequest.OperationCode)
                         {
                             ReturnCode = (short)ErrorType.Correct,
                             DebugMessage = ""
                         };
-
                         SendOperationResponse(response, new SendParameters());
-                        Container container = Answer.SoulDictionary.First(pair => pair.Value.ContainerDictionary.ContainsKey(containerUniqueID)).Value.ContainerDictionary[containerUniqueID];
-                        ProjectContainerToScene(container, server.SceneDictionary[sceneUniqueID]);
+                    }
+                    else
+                    {
+                        OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                        {
+                            ReturnCode = (short)ErrorType.InvalidOperation,
+                            DebugMessage = "場景已存在該容器"
+                        };
+                        SendOperationResponse(response, new SendParameters());
                     }
                 }
             }
@@ -434,26 +418,13 @@ namespace DSServer
             else
             {
                 int sceneUniqueID = (int)operationRequest.Parameters[(byte)GetSceneDataParameterItem.SceneUniqueID];
-                if (!server.SceneDictionary.ContainsKey(sceneUniqueID))
+                string sceneDataString,containersDataString;
+                if (GetSceneData(sceneUniqueID,out sceneDataString,out containersDataString))
                 {
-                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
-                    {
-                        ReturnCode = (short)ErrorType.NotExist,
-                        DebugMessage = "Scene not exist"
-                    };
-                    this.SendOperationResponse(response, new SendParameters());
-                }
-                else
-                {
-                    List<SerializableContainer> containerList = new List<SerializableContainer>();
-                    foreach(Container container in server.SceneDictionary[sceneUniqueID].ContainerDictionary.Values)
-                    {
-                        containerList.Add(container.Serialize());
-                    }
                     Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)GetSceneDataResponseItem.SceneDataString,SerializeFunction.SerializeObject(server.SceneDictionary[sceneUniqueID].Serialize())},
-                                            {(byte)GetSceneDataResponseItem.ContainersDataString,SerializeFunction.SerializeObject(containerList.ToArray())}
+                                            {(byte)GetSceneDataResponseItem.SceneDataString,sceneUniqueID},
+                                            {(byte)GetSceneDataResponseItem.ContainersDataString,containersDataString}
                                         };
 
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
@@ -463,6 +434,15 @@ namespace DSServer
                     };
 
                     SendOperationResponse(response, new SendParameters());
+                }
+                else
+                {
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.NotExist,
+                        DebugMessage = "Scene not exist"
+                    };
+                    this.SendOperationResponse(response, new SendParameters());
                 }
             }
         }
@@ -481,7 +461,24 @@ namespace DSServer
             {
                 int administratorUniqueID = (int)operationRequest.Parameters[(byte)ControlTheSceneParameterItem.AdministratorUniqueID];
                 int sceneUniqueID = (int)operationRequest.Parameters[(byte)ControlTheSceneParameterItem.SceneUniqueID];
-                if (!server.SceneDictionary.ContainsKey(sceneUniqueID))
+                string sceneDataString, containersDataString;
+                if (ControlTheScene(administratorUniqueID,sceneUniqueID,out sceneDataString,out containersDataString))
+                {
+                    Dictionary<byte, object> parameter = new Dictionary<byte, object>
+                                        {
+                                            {(byte)ControlTheSceneResponseItem.SceneDataString,sceneDataString},
+                                            {(byte)ControlTheSceneResponseItem.ContainersDataString,containersDataString}
+                                        };
+
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
+                    {
+                        ReturnCode = (short)ErrorType.Correct,
+                        DebugMessage = ""
+                    };
+
+                    SendOperationResponse(response, new SendParameters());
+                }
+                else
                 {
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode)
                     {
@@ -489,31 +486,6 @@ namespace DSServer
                         DebugMessage = "Scene not exist"
                     };
                     this.SendOperationResponse(response, new SendParameters());
-                }
-                else
-                {
-                    server.SceneDictionary[sceneUniqueID].SceneAdministratorUniqueID = administratorUniqueID;
-                    server.SceneDictionary[sceneUniqueID].AdministratorPeer = this;
-                    server.SceneAdministratorDictionary.Add(administratorUniqueID, server.SceneDictionary[sceneUniqueID]);
-
-                    List<SerializableContainer> containerList = new List<SerializableContainer>();
-                    foreach (Container container in server.SceneDictionary[sceneUniqueID].ContainerDictionary.Values)
-                    {
-                        containerList.Add(container.Serialize());
-                    }
-                    Dictionary<byte, object> parameter = new Dictionary<byte, object>
-                                        {
-                                            {(byte)ControlTheSceneResponseItem.SceneDataString,SerializeFunction.SerializeObject(server.SceneDictionary[sceneUniqueID].Serialize())},
-                                            {(byte)ControlTheSceneResponseItem.ContainersDataString,SerializeFunction.SerializeObject(containerList.ToArray())}
-                                        };
-
-                    OperationResponse response = new OperationResponse(operationRequest.OperationCode,parameter)
-                    {
-                        ReturnCode = (short)ErrorType.Correct,
-                        DebugMessage = ""
-                    };
-
-                    SendOperationResponse(response, new SendParameters());
                 }
             }
         }
@@ -532,7 +504,22 @@ namespace DSServer
             {
                 int sceneUniqueID = (int)operationRequest.Parameters[(byte)SendMoveTargetPositionParameterItem.SceneUniqueID];
                 int containerUniqueID = (int)operationRequest.Parameters[(byte)SendMoveTargetPositionParameterItem.ContainerUniqueID];
-                if (!server.SceneDictionary.ContainsKey(sceneUniqueID) || !server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
+                float positionX = (float)operationRequest.Parameters[(byte)SendMoveTargetPositionParameterItem.PositionX];
+                float positionY = (float)operationRequest.Parameters[(byte)SendMoveTargetPositionParameterItem.PositionY];
+                float positionZ = (float)operationRequest.Parameters[(byte)SendMoveTargetPositionParameterItem.PositionZ];
+
+                if (MoveTargetPosition_and_Broadcast(sceneUniqueID,containerUniqueID,positionX,positionY,positionZ))
+                {
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.Correct,
+                        DebugMessage = ""
+                    };
+
+                    SendOperationResponse(response, new SendParameters());
+                    MoveTargetPosition_and_Broadcast(sceneUniqueID, containerUniqueID, positionX, positionY, positionZ);
+                }
+                else
                 {
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode)
                     {
@@ -541,45 +528,11 @@ namespace DSServer
                     };
                     this.SendOperationResponse(response, new SendParameters());
                 }
-                else
-                {
-                    float positionX = (float)operationRequest.Parameters[(byte)SendMoveTargetPositionParameterItem.PositionX];
-                    float positionY = (float)operationRequest.Parameters[(byte)SendMoveTargetPositionParameterItem.PositionY];
-                    float positionZ = (float)operationRequest.Parameters[(byte)SendMoveTargetPositionParameterItem.PositionZ];
-
-                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
-                    {
-                        ReturnCode = (short)ErrorType.Correct,
-                        DebugMessage = ""
-                    };
-
-                    SendOperationResponse(response, new SendParameters());
-
-                    Dictionary<byte, object> parameter = new Dictionary<byte, object>
-                                        {
-                                            {(byte)SendMoveTargetPositionBroadcastItem.SceneUniqueID,sceneUniqueID},
-                                            {(byte)SendMoveTargetPositionBroadcastItem.ContainerUniqueID,sceneUniqueID},
-                                            {(byte)SendMoveTargetPositionBroadcastItem.PositionX,positionX},
-                                            {(byte)SendMoveTargetPositionBroadcastItem.PositionY,positionY},
-                                            {(byte)SendMoveTargetPositionBroadcastItem.PositionZ,positionZ}
-                                        };
-                    Scene scene = server.SceneDictionary[sceneUniqueID];
-                    List<DSPeer> peers = new List<DSPeer>();
-                    foreach (Container targetContainer in scene.ContainerDictionary.Values)
-                    {
-                        foreach (Soul targetSoul in targetContainer.SoulDictionary.Values)
-                        {
-                            peers.Add(targetSoul.SourceAnswer.Peer);
-                        }
-                    }
-                    peers.Add(scene.AdministratorPeer);
-                    server.Broadcast(peers.ToArray(),BroadcastType.SendMoveTargetPosition,parameter);
-                }
             }
         }
         private void ContainerPositionUpdateTask(OperationRequest operationRequest)
         {
-            if (operationRequest.Parameters.Count != 5)
+            if (operationRequest.Parameters.Count != 6)
             {
                 OperationResponse response = new OperationResponse(operationRequest.OperationCode)
                 {
@@ -592,21 +545,13 @@ namespace DSServer
             {
                 int sceneUniqueID = (int)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.SceneUniqueID];
                 int containerUniqueID = (int)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.ContainerUniqueID];
-                if (!server.SceneDictionary.ContainsKey(sceneUniqueID) || !server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
-                {
-                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
-                    {
-                        ReturnCode = (short)ErrorType.NotExist,
-                        DebugMessage = "Scene or Container not exist"
-                    };
-                    this.SendOperationResponse(response, new SendParameters());
-                }
-                else
-                {
-                    float positionX = (float)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.PositionX];
-                    float positionY = (float)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.PositionY];
-                    float positionZ = (float)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.PositionZ];
+                float positionX = (float)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.PositionX];
+                float positionY = (float)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.PositionY];
+                float positionZ = (float)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.PositionZ];
+                float eulerAngleY = (float)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.EulerAngleY];
 
+                if (UpdateContainerPosition(sceneUniqueID, containerUniqueID, positionX, positionY, positionZ, eulerAngleY))
+                {
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode)
                     {
                         ReturnCode = (short)ErrorType.Correct,
@@ -614,8 +559,15 @@ namespace DSServer
                     };
 
                     SendOperationResponse(response, new SendParameters());
-
-                    UpdateContainerPosition(server.SceneDictionary[sceneUniqueID], server.ContainerDictionary[containerUniqueID], positionX, positionY, positionZ);
+                }
+                else
+                {
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.NotExist,
+                        DebugMessage = "Scene or Container not exist"
+                    };
+                    this.SendOperationResponse(response, new SendParameters());
                 }
             }
         }
@@ -645,64 +597,193 @@ namespace DSServer
             
             return true;
         }
-        public void FillSoulData(SerializableSoul[] soulList)
+        public string RegisterSoulData(int answerUniqueID)
         {
-            foreach(SerializableSoul soul in soulList)
+            SerializableSoul[] soulList = server.database.GetSoulList(answerUniqueID);
+            foreach (SerializableSoul soul in soulList)
             {
                 Answer.SoulDictionary.Add(soul.UniqueID,new Soul(soul, Answer));
             }
+            return SerializeFunction.SerializeObject(soulList);
         }
-        public void FillContainerData(int soulUniqueID, SerializableContainer[] containerList)
+        public string RegisterContainerData(int soulUniqueID)
         {
-            foreach(SerializableContainer container in containerList)
+            SerializableContainer[] containerList = server.database.GetContainerList(soulUniqueID);
+            foreach (SerializableContainer container in containerList)
             {
                 Container soulContainer = new Container(container, server.SceneDictionary[container.LocationUniqueID]);
                 soulContainer.SoulDictionary.Add(soulUniqueID,Answer.SoulDictionary[soulUniqueID]);
                 Answer.SoulDictionary[soulUniqueID].ContainerDictionary.Add(container.UniqueID, soulContainer);
                 server.ContainerDictionary.Add(container.UniqueID, soulContainer);
             }
+            return SerializeFunction.SerializeObject(containerList);
         }
-        public void ProjectContainerToScene(Container container, Scene scene)
+        public bool ActiveSoul_and_Broadcast(int soulUniqueID, Dictionary<byte,object> parameters)
         {
-            scene.ContainerDictionary.Add(container.UniqueID, container);
-            Dictionary<byte, object> parameter = new Dictionary<byte, object>
+            if(Answer.SoulDictionary[soulUniqueID].Active)
+            {
+                return false;
+            }
+            else
+            {
+                Answer.SoulDictionary[soulUniqueID].Active = true;
+                HashSet<DSPeer> peers = new HashSet<DSPeer>();
+                foreach (Answer answer in server.AnswerDictionary.Values)
+                {
+                    peers.Add(answer.Peer);
+                }
+                server.Broadcast(peers.ToArray(), BroadcastType.ActiveSoul, parameters);
+                return true;
+            }
+        }
+        public bool ProjectToScene(int sceneUniqueID, int containerUniqueID)
+        {
+            if(server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
+            {
+                return false;
+            }
+            else
+            {
+                Container container = Answer.SoulDictionary.First(pair => pair.Value.ContainerDictionary.ContainsKey(containerUniqueID)).Value.ContainerDictionary[containerUniqueID];
+                return ProjectContainerToScene(container, server.SceneDictionary[sceneUniqueID]);
+            }
+        }
+        public bool ProjectContainerToScene(Container container, Scene scene)
+        {
+            try
+            {
+                scene.ContainerDictionary.Add(container.UniqueID, container);
+                Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
                                             {(byte)ProjectContainerBroadcastItem.SceneUniqueID,scene.UniqueID},
                                             {(byte)ProjectContainerBroadcastItem.ContainerDataString,SerializeFunction.SerializeObject(container.Serialize())}
                                         };
-            HashSet<DSPeer> peers = new HashSet<DSPeer>();
-            foreach(Container targetContainer in scene.ContainerDictionary.Values)
-            {
-                foreach(Soul targetSoul in targetContainer.SoulDictionary.Values)
+                HashSet<DSPeer> peers = new HashSet<DSPeer>();
+                foreach (Container targetContainer in scene.ContainerDictionary.Values)
                 {
-                    peers.Add(targetSoul.SourceAnswer.Peer);
+                    foreach (Soul targetSoul in targetContainer.SoulDictionary.Values)
+                    {
+                        peers.Add(targetSoul.SourceAnswer.Peer);
+                    }
                 }
+                peers.Add(scene.AdministratorPeer);
+                server.Broadcast(peers.ToArray(), BroadcastType.ProjectContainer, parameter);
+                return true;
             }
-            peers.Add(scene.AdministratorPeer);
-            server.Broadcast(peers.ToArray(), BroadcastType.ProjectContainer, parameter);
+            catch(Exception ex)
+            {
+                Log.Debug(ex.Message);
+                return false;
+            }
         }
-        public void UpdateContainerPosition(Scene scene,Container container,float positionX,float positionY,float positionZ)
+        public bool GetSceneData(int sceneUniqueID, out string sceneDataString,out string containersDataString)
         {
-            container.PositionX = positionX;
-            container.PositionY = positionY;
-            container.PositionZ = positionZ;
-            Dictionary<byte, object> parameter = new Dictionary<byte, object>
-                                        {
-                                            {(byte)ContainerPositionUpdateParameterItem.SceneUniqueID,scene.UniqueID},
-                                            {(byte)ContainerPositionUpdateParameterItem.ContainerUniqueID,container.UniqueID},
-                                            {(byte)ContainerPositionUpdateParameterItem.PositionX,positionX},
-                                            {(byte)ContainerPositionUpdateParameterItem.PositionY,positionY},
-                                            {(byte)ContainerPositionUpdateParameterItem.PositionZ,positionZ}
-                                        };
-            HashSet<DSPeer> peers = new HashSet<DSPeer>();
-            foreach (Container targetContainer in scene.ContainerDictionary.Values)
+            if (server.SceneDictionary.ContainsKey(sceneUniqueID))
             {
-                foreach (Soul targetSoul in targetContainer.SoulDictionary.Values)
+                List<SerializableContainer> containerList = new List<SerializableContainer>();
+                foreach (Container container in server.SceneDictionary[sceneUniqueID].ContainerDictionary.Values)
                 {
-                    peers.Add(targetSoul.SourceAnswer.Peer);
+                    containerList.Add(container.Serialize());
                 }
+                sceneDataString = SerializeFunction.SerializeObject(server.SceneDictionary[sceneUniqueID].Serialize());
+                containersDataString = SerializeFunction.SerializeObject(containerList.ToArray());
+                return true;
             }
-            server.Broadcast(peers.ToArray(), BroadcastType.ContainerPositionUpdate, parameter);
+            else
+            {
+                sceneDataString = "";
+                containersDataString = "";
+                return false;
+            }
+        }
+        public bool ControlTheScene(int administratorUniqueID, int sceneUniqueID, out string sceneDataString, out string containersDataString)
+        {
+            if(server.SceneDictionary.ContainsKey(sceneUniqueID))
+            {
+                server.SceneDictionary[sceneUniqueID].SceneAdministratorUniqueID = administratorUniqueID;
+                server.SceneDictionary[sceneUniqueID].AdministratorPeer = this;
+                server.SceneAdministratorDictionary.Add(administratorUniqueID, server.SceneDictionary[sceneUniqueID]);
+
+                List<SerializableContainer> containerList = new List<SerializableContainer>();
+                foreach (Container container in server.SceneDictionary[sceneUniqueID].ContainerDictionary.Values)
+                {
+                    containerList.Add(container.Serialize());
+                }
+                sceneDataString = SerializeFunction.SerializeObject(server.SceneDictionary[sceneUniqueID].Serialize());
+                containersDataString = SerializeFunction.SerializeObject(containerList.ToArray());
+                return true;
+            }
+            else
+            {
+                sceneDataString = "";
+                containersDataString = "";
+                return false;
+            }
+        }
+        public bool MoveTargetPosition_and_Broadcast(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ)
+        {
+            if (server.SceneDictionary.ContainsKey(sceneUniqueID) && server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
+            {
+                Dictionary<byte, object> parameter = new Dictionary<byte, object>
+                                        {
+                                            {(byte)SendMoveTargetPositionBroadcastItem.SceneUniqueID,sceneUniqueID},
+                                            {(byte)SendMoveTargetPositionBroadcastItem.ContainerUniqueID,containerUniqueID},
+                                            {(byte)SendMoveTargetPositionBroadcastItem.PositionX,positionX},
+                                            {(byte)SendMoveTargetPositionBroadcastItem.PositionY,positionY},
+                                            {(byte)SendMoveTargetPositionBroadcastItem.PositionZ,positionZ}
+                                        };
+                Scene scene = server.SceneDictionary[sceneUniqueID];
+                List<DSPeer> peers = new List<DSPeer>();
+                foreach (Container targetContainer in scene.ContainerDictionary.Values)
+                {
+                    foreach (Soul targetSoul in targetContainer.SoulDictionary.Values)
+                    {
+                        peers.Add(targetSoul.SourceAnswer.Peer);
+                    }
+                }
+                peers.Add(scene.AdministratorPeer);
+                server.Broadcast(peers.ToArray(), BroadcastType.SendMoveTargetPosition, parameter);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        public bool UpdateContainerPosition(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ, float eulerAngleY)
+        {
+            if(server.SceneDictionary.ContainsKey(sceneUniqueID) && server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
+            {
+                Scene scene = server.SceneDictionary[sceneUniqueID];
+                Container container = server.SceneDictionary[sceneUniqueID].ContainerDictionary[containerUniqueID];
+                container.PositionX = positionX;
+                container.PositionY = positionY;
+                container.PositionZ = positionZ;
+                container.EulerAngleY = eulerAngleY;
+                Dictionary<byte, object> parameter = new Dictionary<byte, object>
+                                        {
+                                            {(byte)ContainerPositionUpdateBroadcastItem.SceneUniqueID,scene.UniqueID},
+                                            {(byte)ContainerPositionUpdateBroadcastItem.ContainerUniqueID,container.UniqueID},
+                                            {(byte)ContainerPositionUpdateBroadcastItem.PositionX,positionX},
+                                            {(byte)ContainerPositionUpdateBroadcastItem.PositionY,positionY},
+                                            {(byte)ContainerPositionUpdateBroadcastItem.PositionZ,positionZ},
+                                            {(byte)ContainerPositionUpdateBroadcastItem.EulerAngleY,eulerAngleY}
+                                        };
+                HashSet<DSPeer> peers = new HashSet<DSPeer>();
+                foreach (Container targetContainer in scene.ContainerDictionary.Values)
+                {
+                    foreach (Soul targetSoul in targetContainer.SoulDictionary.Values)
+                    {
+                        peers.Add(targetSoul.SourceAnswer.Peer);
+                    }
+                }
+                server.Broadcast(peers.ToArray(), BroadcastType.ContainerPositionUpdate, parameter);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
     }
 }

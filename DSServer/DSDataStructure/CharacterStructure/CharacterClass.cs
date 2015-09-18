@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using DSDataStructure.WorldLevelStructure;
 using DSSerializable.CharacterStructure;
 using DSServer;
@@ -86,8 +83,9 @@ namespace DSDataStructure
         public float PositionX { get; set; }
         public float PositionY { get; set; }
         public float PositionZ { get; set; }
+        public float EulerAngleY { get; set; }
 
-        public Container(int uniqueID, string name, Scene location, float postionX, float positionY, float positionZ)
+        public Container(int uniqueID, string name, Scene location, float postionX, float positionY, float positionZ,float eulerAngleY)
         {
             UniqueID = uniqueID;
             Name = name;
@@ -96,6 +94,7 @@ namespace DSDataStructure
             PositionX = postionX;
             PositionY = positionY;
             PositionZ = positionZ;
+            EulerAngleY = eulerAngleY;
         }
 
         public Container(SerializableContainer container, Scene location)
@@ -107,11 +106,12 @@ namespace DSDataStructure
             PositionX = container.PositionX;
             PositionY = container.PositionY;
             PositionZ = container.PositionZ;
+            EulerAngleY = container.EulerAngleY;
         }
 
         public SerializableContainer Serialize()
         {
-            return new SerializableContainer(UniqueID, Name, Location.UniqueID, PositionX, PositionY, PositionZ);
+            return new SerializableContainer(UniqueID, Name, Location.UniqueID, PositionX, PositionY, PositionZ, EulerAngleY);
         }
     }
 }

@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using System.Security.Cryptography;
-using System.Data.SqlClient;
 using DSSerializable.CharacterStructure;
 
 namespace DSServer
@@ -260,9 +257,9 @@ namespace DSServer
             {
                 if (connection.State == System.Data.ConnectionState.Closed)
                     connection.Open();
-                //using (SHA512 sha512 = new SHA512CryptoServiceProvider())
+                using (SHA512 sha512 = new SHA512CryptoServiceProvider())
                 {
-                    //string _passwordSHA512 = ToHexString(sha512.ComputeHash(Encoding.Default.GetBytes(_password)));
+                    string passwordSHA512 = ToHexString(sha512.ComputeHash(Encoding.Default.GetBytes(password)));
 
 
                     String sqlText = "SELECT answer.UniqueID FROM answer, (SELECT UniqueID FROM player WHERE Account=@account and Password=@password)as accountUniqueID WHERE answer.PlayerUniqueID = accountUniqueID.UniqueID";
@@ -338,7 +335,7 @@ namespace DSServer
                 if (connection.State == System.Data.ConnectionState.Closed)
                     connection.Open();
 
-                String sqlText = "SELECT UniqueID,Name,LocationUniqueID,PositionX,PositionY,PositionZ FROM container WHERE SoulUniqueID = @soulUniqueID";
+                String sqlText = "SELECT UniqueID,Name,LocationUniqueID,PositionX,PositionY,PositionZ,EulerAngleY FROM container WHERE SoulUniqueID = @soulUniqueID";
                 using (MySqlCommand cmd = new MySqlCommand(sqlText, connection))
                 {
                     cmd.Parameters.AddWithValue("@soulUniqueID", soulUniqueID);
@@ -347,7 +344,7 @@ namespace DSServer
                         List<SerializableContainer> containerList = new List<SerializableContainer>();
                         while (reader.Read())
                         {
-                            containerList.Add(new SerializableContainer(reader.GetInt32(0), reader.GetString(1), reader.GetInt32(2),reader.GetFloat(3),reader.GetFloat(4),reader.GetFloat(5)));
+                            containerList.Add(new SerializableContainer(reader.GetInt32(0), reader.GetString(1), reader.GetInt32(2),reader.GetFloat(3),reader.GetFloat(4),reader.GetFloat(5),reader.GetFloat(6)));
                         }
                         return containerList.ToArray();
                     }
