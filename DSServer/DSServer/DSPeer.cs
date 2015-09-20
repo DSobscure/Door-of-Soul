@@ -169,6 +169,14 @@ namespace DSServer
                     }
                     break;
                 #endregion
+
+                #region send message
+                case (byte)OperationType.SendMessage:
+                    {
+                        SendMessageTask(operationRequest);
+                    }
+                    break;
+                    #endregion
             }
         }
 
@@ -423,7 +431,7 @@ namespace DSServer
                 {
                     Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)GetSceneDataResponseItem.SceneDataString,sceneUniqueID},
+                                            {(byte)GetSceneDataResponseItem.SceneDataString,sceneDataString},
                                             {(byte)GetSceneDataResponseItem.ContainersDataString,containersDataString}
                                         };
 
@@ -517,7 +525,6 @@ namespace DSServer
                     };
 
                     SendOperationResponse(response, new SendParameters());
-                    MoveTargetPosition_and_Broadcast(sceneUniqueID, containerUniqueID, positionX, positionY, positionZ);
                 }
                 else
                 {
@@ -550,7 +557,7 @@ namespace DSServer
                 float positionZ = (float)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.PositionZ];
                 float eulerAngleY = (float)operationRequest.Parameters[(byte)ContainerPositionUpdateParameterItem.EulerAngleY];
 
-                if (UpdateContainerPosition(sceneUniqueID, containerUniqueID, positionX, positionY, positionZ, eulerAngleY))
+                if (UpdateContainerPosition_and_Broadcast(sceneUniqueID, containerUniqueID, positionX, positionY, positionZ, eulerAngleY))
                 {
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode)
                     {
@@ -571,9 +578,47 @@ namespace DSServer
                 }
             }
         }
+        private void SendMessageTask(OperationRequest operationRequest)
+        {
+            if (operationRequest.Parameters.Count != 3)
+            {
+                OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                {
+                    ReturnCode = (short)ErrorType.InvalidParameter,
+                    DebugMessage = "SendMessageTask Parameter Error"
+                };
+                this.SendOperationResponse(response, new SendParameters());
+            }
+            else
+            {
+                int containerUniqueID = (int)operationRequest.Parameters[(byte)SendMessageParameterItem.ContainerUniqueID];
+                MessageLevel level = (MessageLevel)operationRequest.Parameters[(byte)SendMessageParameterItem.MessageLevel];
+                string message = (string)operationRequest.Parameters[(byte)SendMessageParameterItem.Message];
+
+                if (SendMessage_and_Broadcast(containerUniqueID, level, message))
+                {
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.Correct,
+                        DebugMessage = ""
+                    };
+
+                    SendOperationResponse(response, new SendParameters());
+                }
+                else
+                {
+                    OperationResponse response = new OperationResponse(operationRequest.OperationCode)
+                    {
+                        ReturnCode = (short)ErrorType.NotExist,
+                        DebugMessage = "Send target not exist"
+                    };
+                    this.SendOperationResponse(response, new SendParameters());
+                }
+            }
+        }
 
         //Action
-        public bool OpenDS(int answerUniqueID)
+        private bool OpenDS(int answerUniqueID)
         {
             string[]  requestItem = new string[3];
             requestItem[0] = "Name";
@@ -597,7 +642,7 @@ namespace DSServer
             
             return true;
         }
-        public string RegisterSoulData(int answerUniqueID)
+        private string RegisterSoulData(int answerUniqueID)
         {
             SerializableSoul[] soulList = server.database.GetSoulList(answerUniqueID);
             foreach (SerializableSoul soul in soulList)
@@ -606,7 +651,7 @@ namespace DSServer
             }
             return SerializeFunction.SerializeObject(soulList);
         }
-        public string RegisterContainerData(int soulUniqueID)
+        private string RegisterContainerData(int soulUniqueID)
         {
             SerializableContainer[] containerList = server.database.GetContainerList(soulUniqueID);
             foreach (SerializableContainer container in containerList)
@@ -618,7 +663,7 @@ namespace DSServer
             }
             return SerializeFunction.SerializeObject(containerList);
         }
-        public bool ActiveSoul_and_Broadcast(int soulUniqueID, Dictionary<byte,object> parameters)
+        private bool ActiveSoul_and_Broadcast(int soulUniqueID, Dictionary<byte,object> parameters)
         {
             if(Answer.SoulDictionary[soulUniqueID].Active)
             {
@@ -636,7 +681,7 @@ namespace DSServer
                 return true;
             }
         }
-        public bool ProjectToScene(int sceneUniqueID, int containerUniqueID)
+        private bool ProjectToScene(int sceneUniqueID, int containerUniqueID)
         {
             if(server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
             {
@@ -645,10 +690,10 @@ namespace DSServer
             else
             {
                 Container container = Answer.SoulDictionary.First(pair => pair.Value.ContainerDictionary.ContainsKey(containerUniqueID)).Value.ContainerDictionary[containerUniqueID];
-                return ProjectContainerToScene(container, server.SceneDictionary[sceneUniqueID]);
+                return ProjectContainerToScene_and_Broadcast(container, server.SceneDictionary[sceneUniqueID]);
             }
         }
-        public bool ProjectContainerToScene(Container container, Scene scene)
+        private bool ProjectContainerToScene_and_Broadcast(Container container, Scene scene)
         {
             try
             {
@@ -666,26 +711,28 @@ namespace DSServer
                         peers.Add(targetSoul.SourceAnswer.Peer);
                     }
                 }
-                peers.Add(scene.AdministratorPeer);
+                if (scene.AdministratorPeer != null)
+                    peers.Add(scene.AdministratorPeer);
                 server.Broadcast(peers.ToArray(), BroadcastType.ProjectContainer, parameter);
                 return true;
             }
             catch(Exception ex)
             {
-                Log.Debug(ex.Message);
+                DSServer.Log.Error(ex.Message);
                 return false;
             }
         }
-        public bool GetSceneData(int sceneUniqueID, out string sceneDataString,out string containersDataString)
+        private bool GetSceneData(int sceneUniqueID, out string sceneDataString,out string containersDataString)
         {
             if (server.SceneDictionary.ContainsKey(sceneUniqueID))
             {
+                Scene scene = server.SceneDictionary[sceneUniqueID];
                 List<SerializableContainer> containerList = new List<SerializableContainer>();
-                foreach (Container container in server.SceneDictionary[sceneUniqueID].ContainerDictionary.Values)
+                foreach (Container container in scene.ContainerDictionary.Values)
                 {
                     containerList.Add(container.Serialize());
                 }
-                sceneDataString = SerializeFunction.SerializeObject(server.SceneDictionary[sceneUniqueID].Serialize());
+                sceneDataString = SerializeFunction.SerializeObject(scene.Serialize());
                 containersDataString = SerializeFunction.SerializeObject(containerList.ToArray());
                 return true;
             }
@@ -696,7 +743,7 @@ namespace DSServer
                 return false;
             }
         }
-        public bool ControlTheScene(int administratorUniqueID, int sceneUniqueID, out string sceneDataString, out string containersDataString)
+        private bool ControlTheScene(int administratorUniqueID, int sceneUniqueID, out string sceneDataString, out string containersDataString)
         {
             if(server.SceneDictionary.ContainsKey(sceneUniqueID))
             {
@@ -720,7 +767,7 @@ namespace DSServer
                 return false;
             }
         }
-        public bool MoveTargetPosition_and_Broadcast(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ)
+        private bool MoveTargetPosition_and_Broadcast(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ)
         {
             if (server.SceneDictionary.ContainsKey(sceneUniqueID) && server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
             {
@@ -741,7 +788,8 @@ namespace DSServer
                         peers.Add(targetSoul.SourceAnswer.Peer);
                     }
                 }
-                peers.Add(scene.AdministratorPeer);
+                if(scene.AdministratorPeer != null)
+                    peers.Add(scene.AdministratorPeer);
                 server.Broadcast(peers.ToArray(), BroadcastType.SendMoveTargetPosition, parameter);
                 return true;
             }
@@ -750,12 +798,12 @@ namespace DSServer
                 return false;
             }
         }
-        public bool UpdateContainerPosition(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ, float eulerAngleY)
+        private bool UpdateContainerPosition_and_Broadcast(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ, float eulerAngleY)
         {
             if(server.SceneDictionary.ContainsKey(sceneUniqueID) && server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
             {
                 Scene scene = server.SceneDictionary[sceneUniqueID];
-                Container container = server.SceneDictionary[sceneUniqueID].ContainerDictionary[containerUniqueID];
+                Container container = scene.ContainerDictionary[containerUniqueID];
                 container.PositionX = positionX;
                 container.PositionY = positionY;
                 container.PositionZ = positionZ;
@@ -784,6 +832,48 @@ namespace DSServer
             {
                 return false;
             }
+        }
+        private bool SendMessage_and_Broadcast(int containerUniqueID,MessageLevel level, string message)
+        {
+            if (server.ContainerDictionary.ContainsKey(containerUniqueID))
+            {
+                Container container = server.ContainerDictionary[containerUniqueID];
+                Dictionary<byte, object> parameter = new Dictionary<byte, object>
+                                        {
+                                            {(byte)SendMessageBroadcastItem.ContainerUniqueID,containerUniqueID },
+                                            {(byte)SendMessageBroadcastItem.ContainerName,container.Name},
+                                            {(byte)SendMessageBroadcastItem.MessageLevel,level},
+                                            {(byte)SendMessageBroadcastItem.Message,message}
+                                        };
+                List<DSPeer> peers = GetPeerListByMessageLevel(container, level);
+                server.Broadcast(peers.ToArray(), BroadcastType.SendMessage, parameter);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        //Tool Function
+        private List<DSPeer> GetPeerListByMessageLevel(Container container, MessageLevel level)
+        {
+            List<DSPeer> peers = new List<DSPeer>();
+            switch(level)
+            {
+                case MessageLevel.Scene:
+                    {
+                        foreach(Container targetContainer in container.Location.ContainerDictionary.Values)
+                        {
+                            foreach (Soul targetSoul in targetContainer.SoulDictionary.Values)
+                            {
+                                peers.Add(targetSoul.SourceAnswer.Peer);
+                            }
+                        }
+                    }
+                    break;
+            }
+            return peers;
         }
     }
 }

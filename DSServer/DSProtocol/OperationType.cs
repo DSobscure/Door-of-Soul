@@ -9,8 +9,8 @@
         ProjectToScene,
         GetSceneData,
         ControlTheScene,
-        ContainerMoveRequest,
         SendMoveTargetPosition,
-        ContainerPositionUpdate
+        ContainerPositionUpdate,
+        SendMessage
     }
 }

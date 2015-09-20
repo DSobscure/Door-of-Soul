@@ -7,6 +7,7 @@
         Disconnect,
         ContainerMove,
         SendMoveTargetPosition,
-        ContainerPositionUpdate
+        ContainerPositionUpdate,
+        SendMessage
     }
 }

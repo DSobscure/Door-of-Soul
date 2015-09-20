@@ -4,6 +4,7 @@ using System.Linq;
 using DSSerializable.CharacterStructure;
 using System;
 using DSSerializable.WorldLevelStructure;
+using DSProtocol;
 
 public class EnterWorldGraphAction : MonoBehaviour {
 
@@ -21,6 +22,7 @@ public class EnterWorldGraphAction : MonoBehaviour {
         PhotonGlobal.PS.DisconnectEvent += DisconnectEventAction;
         PhotonGlobal.PS.UpdateContainerPositionEvent += UpdateContainerPositionEventAction;
         PhotonGlobal.PS.MoveTargetPositionEvent += MoveTargetPositionEventAction;
+        PhotonGlobal.PS.SendMessageEvent += SendMessageEventAction;
 
         PhotonGlobal.PS.GetSoulList(AnswerGlobal.Answer);
         yield return null;
@@ -93,11 +95,12 @@ public class EnterWorldGraphAction : MonoBehaviour {
             foreach(SerializableContainer container in containers)
             {
                 Container targetContainer = new Container(container);
+                targetContainer.GameObject = Instantiate(AnswerGlobal.containerPrefab, new Vector3(targetContainer.PositionX, targetContainer.PositionY, targetContainer.PositionZ), Quaternion.identity) as GameObject;
                 AnswerGlobal.Scene.ContainerDictionary.Add(container.UniqueID, targetContainer);
-                targetContainer.GameObject = Instantiate(AnswerGlobal.containerPrefab, new Vector3(targetContainer.PositionX,targetContainer.PositionY,targetContainer.PositionZ) ,Quaternion.identity) as GameObject;
-                if(container.UniqueID == AnswerGlobal.MainContainer.UniqueID)
+                if(AnswerGlobal.MainContainer.UniqueID == container.UniqueID)
                 {
-                    Camera.main.transform.parent = targetContainer.GameObject.transform;
+                    Camera.main.GetComponent<CameraFollow>().target = targetContainer.GameObject.transform;
+                    AnswerGlobal.MainContainer = targetContainer;
                 }
             }
         }
@@ -131,14 +134,21 @@ public class EnterWorldGraphAction : MonoBehaviour {
             }
         }
     }
-    private void UpdateContainerPositionEventAction(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ)
+    private void UpdateContainerPositionEventAction(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ, float eulerAngleY)
     {
         Scene scene = AnswerGlobal.Scene;
-        if (scene.UniqueID == sceneUniqueID && scene.ContainerDictionary.ContainsKey(containerUniqueID))
+        if (scene != null && scene.UniqueID == sceneUniqueID && scene.ContainerDictionary.ContainsKey(containerUniqueID))
         {
-            scene.ContainerDictionary[containerUniqueID].GameObject.GetComponent<Rigidbody>().MovePosition(new Vector3(positionX, positionY, positionZ));
-            //scene.ContainerDictionary[containerUniqueID].TargetPostion = new Vector3(positionX, positionY, positionZ);
-            //scene.ContainerDictionary[containerUniqueID].Moving = true;
+            Container container = scene.ContainerDictionary[containerUniqueID];
+            container.PositionX = positionX;
+            container.PositionY = positionY;
+            container.PositionZ = positionZ;
+            if(!container.Moving)
+            {
+                Rigidbody rigidbody = container.GameObject.GetComponent<Rigidbody>();
+                rigidbody.MovePosition(new Vector3(positionX, positionY, positionZ));
+                rigidbody.MoveRotation(Quaternion.Euler(0, eulerAngleY, 0));
+            }
         }
     }
     private void MoveTargetPositionEventAction(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ)
@@ -146,8 +156,30 @@ public class EnterWorldGraphAction : MonoBehaviour {
         Scene scene = AnswerGlobal.Scene;
         if (scene.UniqueID == sceneUniqueID && scene.ContainerDictionary.ContainsKey(containerUniqueID))
         {
-            scene.ContainerDictionary[containerUniqueID].TargetPostion = new Vector3(positionX, positionY, positionZ);
-            scene.ContainerDictionary[containerUniqueID].Moving = true;
+            Container container = scene.ContainerDictionary[containerUniqueID];
+            container.TargetPostion = new Vector3(positionX, positionY, positionZ);
+            container.Moving = true;
+            container.GameObject.GetComponent<ContainerMoveController>().targetPosition = container.TargetPostion;
+            container.GameObject.GetComponent<ContainerMoveController>().moving = container.Moving;
+        }
+    }
+    private void SendMessageEventAction(int containerUniqueID, string containerName, MessageLevel level, string message)
+    {
+        MessagePanelController messageController = GameObject.FindGameObjectWithTag("MessagePanel").GetComponent<MessagePanelController>();
+        if(messageController != null)
+        {
+            switch(level)
+            {
+                case MessageLevel.Scene:
+                    {
+                        if(AnswerGlobal.Scene.ContainerDictionary.ContainsKey(containerUniqueID))
+                        {
+                            messageController.MessageContent.Add("[場景] "+containerName+": "+message);
+                            messageController.UpdateMessageBox();
+                        }
+                    }
+                    break;
+            }
         }
     }
 }

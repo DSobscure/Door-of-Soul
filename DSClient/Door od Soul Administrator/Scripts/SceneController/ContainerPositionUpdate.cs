@@ -5,7 +5,7 @@ public class ContainerPositionUpdate : MonoBehaviour
 {
 	void Start () 
     {
-        InvokeRepeating("UpdateContainerPosition", 0f, 5f);
+        InvokeRepeating("UpdateContainerPosition", 0f, 1f);
 	}
 
     void UpdateContainerPosition()
@@ -14,7 +14,7 @@ public class ContainerPositionUpdate : MonoBehaviour
         {
             foreach (Container container in SceneGlobal.Scene.ContainerDictionary.Values)
             {
-                PhotonGlobal.PS.ContainerPositionUpdate(SceneGlobal.SceneUniqueID, container.UniqueID, container.PositionX, container.PositionY, container.PositionZ);
+                PhotonGlobal.PS.ContainerPositionUpdate(SceneGlobal.SceneUniqueID, container.UniqueID, container.PositionX, container.PositionY, container.PositionZ, container.EulerAngleY);
             }
         }
     }

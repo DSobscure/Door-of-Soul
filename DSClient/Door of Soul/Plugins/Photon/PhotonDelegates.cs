@@ -1,5 +1,6 @@
 ﻿using DSSerializable.CharacterStructure;
 using DSSerializable.WorldLevelStructure;
+using DSProtocol;
 
 public partial class PhotonService
 {
@@ -33,9 +34,13 @@ public partial class PhotonService
     public delegate void DisconnectEventHandler(int[] soulUniqueIDList, int[] sceneUniqueIDList, int[] containerUniqueIDList);
     public event DisconnectEventHandler DisconnectEvent;
 
-    public delegate void UpdateContainerPositionEventHandler(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ);
+    public delegate void UpdateContainerPositionEventHandler(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ, float eulerAngleY);
     public event UpdateContainerPositionEventHandler UpdateContainerPositionEvent;
 
     public delegate void MoveTargetPositionEventHandler(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ);
     public event MoveTargetPositionEventHandler MoveTargetPositionEvent;
+
+    public delegate void SendMessageEventHandler(int containerUniqueID, string containerName, MessageLevel level, string message);
+    public event SendMessageEventHandler SendMessageEvent;
+
 }

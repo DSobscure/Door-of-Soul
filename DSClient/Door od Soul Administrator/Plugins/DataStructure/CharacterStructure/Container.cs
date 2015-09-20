@@ -9,56 +9,15 @@ public class Container
     public int LocationUniqueID { get; set; }
     public GameObject GameObject { get; set; }
 
-    private float _positionX;
-    private float _positionY;
-    private float _positionZ;
-    public float PositionX 
-    {
-        get
-        {
-            if (GameObject != null)
-                return GameObject.transform.position.x;
-            else
-                return _positionX;
-        } 
-        set
-        {
-            _positionX = value;
-        }
-    }
-    public float PositionY
-    {
-        get
-        {
-            if (GameObject != null)
-                return GameObject.transform.position.y;
-            else
-                return _positionY;
-        }
-        set
-        {
-            _positionY = value;
-        }
-    }
-    public float PositionZ
-    {
-        get
-        {
-            if (GameObject != null)
-                return GameObject.transform.position.z;
-            else
-                return _positionZ;
-        }
-        set
-        {
-            _positionZ = value;
-        }
-    }
+    public float PositionX { get; set; }
+    public float PositionY { get; set; }
+    public float PositionZ { get; set; }
+    public float EulerAngleY { get; set; }
 
     public Vector3 TargetPostion { get; set; }
     public bool Moving { get; set; }
 
-    public Container(int uniqueID, string name, int locationUniqueID, float postionX, float positionY, float positionZ)
+    public Container(int uniqueID, string name, int locationUniqueID, float postionX, float positionY, float positionZ, float eulerAngleY)
     {
         UniqueID = uniqueID;
         Name = name;
@@ -66,6 +25,7 @@ public class Container
         PositionX = postionX;
         PositionY = positionY;
         PositionZ = positionZ;
+        EulerAngleY = eulerAngleY;
     }
 
     public Container(SerializableContainer container)
@@ -76,5 +36,6 @@ public class Container
         PositionX = container.PositionX;
         PositionY = container.PositionY;
         PositionZ = container.PositionZ;
+        EulerAngleY = container.EulerAngleY;
     }
 }

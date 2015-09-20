@@ -38,11 +38,6 @@
         SceneUniqueID
     }
 
-    public enum ContainerMoveRequestParameterItem
-    {
-
-    }
-
     public enum SendMoveTargetPositionParameterItem
     {
         SceneUniqueID,
@@ -58,6 +53,14 @@
         ContainerUniqueID,
         PositionX,
         PositionY,
-        PositionZ
+        PositionZ,
+        EulerAngleY
+    }
+
+    public enum SendMessageParameterItem
+    {
+        ContainerUniqueID,
+        MessageLevel,
+        Message
     }
 }

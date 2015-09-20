@@ -113,6 +113,14 @@ public partial class PhotonService : IPhotonPeerListener
                 }
                 break;
             #endregion
+
+            #region send message
+            case (byte)BroadcastType.SendMessage:
+                {
+                    SendMessageEventTask(eventData);
+                }
+                break;
+            #endregion
         }
     }
 
@@ -322,14 +330,15 @@ public partial class PhotonService : IPhotonPeerListener
     }
     private void ContainerPositionUpdateEventTask(EventData eventData)
     {
-        if(eventData.Parameters.Count == 5)
+        if(eventData.Parameters.Count == 6)
         {
             int sceneUniqueID = (int)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.SceneUniqueID];
             int containerUniqueID = (int)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.ContainerUniqueID];
             float positionX = (float)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.PositionX];
             float positionY = (float)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.PositionY];
             float positionZ = (float)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.PositionZ];
-            UpdateContainerPositionEvent(sceneUniqueID, containerUniqueID, positionX, positionY, positionZ);
+            float eulerAngleY = (float)eventData.Parameters[(byte)ContainerPositionUpdateBroadcastItem.EulerAngleY];
+            UpdateContainerPositionEvent(sceneUniqueID, containerUniqueID, positionX, positionY, positionZ, eulerAngleY);
         }
         else
         {
@@ -350,6 +359,22 @@ public partial class PhotonService : IPhotonPeerListener
         else
         {
             Debug.Log("SendMoveTargetPositionEventTask parameter error");
+        }
+    }
+    private void SendMessageEventTask(EventData eventData)
+    {
+        if (eventData.Parameters.Count == 4)
+        {
+            int containerUniqueID = (int)eventData.Parameters[(byte)SendMessageBroadcastItem.ContainerUniqueID];
+            string containerName = (string)eventData.Parameters[(byte)SendMessageBroadcastItem.ContainerName];
+            MessageLevel level = (MessageLevel)eventData.Parameters[(byte)SendMessageBroadcastItem.MessageLevel];
+            string message = (string)eventData.Parameters[(byte)SendMessageBroadcastItem.Message];
+
+            SendMessageEvent(containerUniqueID, containerName, level, message);
+        }
+        else
+        {
+            Debug.Log("SendMessageEventTask parameter error");
         }
     }
 
@@ -459,6 +484,23 @@ public partial class PhotonService : IPhotonPeerListener
                         };
 
             this.peer.OpCustom((byte)OperationType.SendMoveTargetPosition, parameter, true, 0, true);
+        }
+        catch (Exception EX)
+        {
+            throw EX;
+        }
+    }
+    public void SendMessage(int containerUniqueID, MessageLevel level,string message)
+    {
+        try
+        {
+            var parameter = new Dictionary<byte, object> {
+                             {(byte)SendMessageParameterItem.ContainerUniqueID,containerUniqueID},
+                             {(byte)SendMessageParameterItem.MessageLevel,level},
+                             {(byte)SendMessageParameterItem.Message,message},
+                        };
+
+            this.peer.OpCustom((byte)OperationType.SendMessage, parameter, true, 0, true);
         }
         catch (Exception EX)
         {

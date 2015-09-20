@@ -13,7 +13,7 @@ namespace DSServer
 {
     public class DSServer : ApplicationBase
     {
-        private static readonly ILogger Log = LogManager.GetCurrentClassLogger();
+        public static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         public Graph worldGraph { get; set; }
         public Dictionary<Guid, DSPeer> WandererDictionary { get; set; }
         public Dictionary<int, Scene> SceneDictionary { get; set; }

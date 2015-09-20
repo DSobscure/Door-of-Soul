@@ -3,7 +3,7 @@
 public class PhotonCallService : MonoBehaviour
 {
 
-    void Update()
+    void FixedUpdate()
     {
         PhotonGlobal.PS.Service();
     }

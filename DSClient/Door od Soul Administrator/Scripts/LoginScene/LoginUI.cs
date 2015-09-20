@@ -46,6 +46,7 @@ public class LoginUI : MonoBehaviour
                         SceneGlobal.AdministratorUniqueID = int.Parse(administratorUniqueID);
                         SceneGlobal.SceneUniqueID = int.Parse(sceneUniqueID);
                         PhotonGlobal.PS.ControlTheScene(SceneGlobal.AdministratorUniqueID, SceneGlobal.SceneUniqueID);
+                        Application.LoadLevel("testScene");
                     }
                     GUI.Label(new Rect(30, 160, 600, 20), controlTheSceneResult);
                 }
@@ -68,10 +69,11 @@ public class LoginUI : MonoBehaviour
             SceneGlobal.Scene = new Scene(scene);
             foreach(SerializableContainer container in containers)
             {
-                SceneGlobal.Scene.ContainerDictionary.Add(container.UniqueID,new Container(container));
+                Container targetContainer = new Container(container);
+                targetContainer.GameObject = Instantiate(SceneGlobal.containerPrefab, new Vector3(targetContainer.PositionX, targetContainer.PositionY, targetContainer.PositionZ), Quaternion.identity) as GameObject;
+                SceneGlobal.Scene.ContainerDictionary.Add(container.UniqueID, targetContainer);
             }
             SceneGlobal.ControlTheSceneStatus = true;
-            Application.LoadLevel("testScene");
         }
         else
         {

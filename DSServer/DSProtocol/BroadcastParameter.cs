@@ -38,6 +38,15 @@
         ContainerUniqueID,
         PositionX,
         PositionY,
-        PositionZ
+        PositionZ,
+        EulerAngleY
+    }
+
+    public enum SendMessageBroadcastItem
+    {
+        ContainerUniqueID,
+        ContainerName,
+        MessageLevel,
+        Message
     }
 }
