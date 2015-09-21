@@ -22,13 +22,11 @@ namespace DSServer
             dsPassword = password;
             dsDatabase = database;
         }
-
         public void Dispose()
         {
             if (connection.State != System.Data.ConnectionState.Closed)
                 connection.Close();
         }
-
         public bool Connect()
         {
             string connectString = "server=" + dsHostname + ";uid=" + dsUsername + ";pwd=" + dsPassword + ";database=" + dsDatabase;
@@ -38,18 +36,18 @@ namespace DSServer
             return connection is MySqlConnection;
         }   
 
-        public string[] GetDataByUniqueID(int uniqueID, string[] requestItem, string table)
+        public string[] GetDataByUniqueID(int uniqueID, string[] requestItems, string table)
         {
             try
             {
                 if (connection.State == System.Data.ConnectionState.Closed)
                     connection.Open();
                 StringBuilder sqlText = new StringBuilder();
-                sqlText.Append("SELECT " + requestItem[0]);
-                int requestNumber = requestItem.Length;
+                sqlText.Append("SELECT " + requestItems[0]);
+                int requestNumber = requestItems.Length;
                 for (int index1 = 1; index1 < requestNumber; index1++)
                 {
-                    sqlText.Append("," + requestItem[index1]);
+                    sqlText.Append("," + requestItems[index1]);
                 }
                 sqlText.Append(" FROM " + table + " WHERE UniqueID=@uniqueID");
                 using (MySqlCommand cmd = new MySqlCommand(sqlText.ToString(), connection))
@@ -86,19 +84,18 @@ namespace DSServer
                     connection.Close();
             }
         }
-
-        public object[] GetDataByUniqueID(int uniqueID, string[] requestItem, TypeCode[] requestType, string table)
+        public object[] GetDataByUniqueID(int uniqueID, string[] requestItems, TypeCode[] requestTypes, string table)
         {
             try
             {
                 if (connection.State == System.Data.ConnectionState.Closed)
                     connection.Open();
                 StringBuilder sqlText = new StringBuilder();
-                sqlText.Append("SELECT " + requestItem[0]);
-                int requestNumber = requestItem.Length;
+                sqlText.Append("SELECT " + requestItems[0]);
+                int requestNumber = requestItems.Length;
                 for (int index1 = 1; index1 < requestNumber; index1++)
                 {
-                    sqlText.Append("," + requestItem[index1]);
+                    sqlText.Append("," + requestItems[index1]);
                 }
                 sqlText.Append(" FROM " + table + " WHERE UniqueID=@uniqueID");
                 using (MySqlCommand cmd = new MySqlCommand(sqlText.ToString(), connection))
@@ -115,7 +112,7 @@ namespace DSServer
                                     returnValue[index1] = null;
                                 else
                                 {
-                                    switch (requestType[index1])
+                                    switch (requestTypes[index1])
                                     {
                                         case TypeCode.Boolean:
                                             returnValue[index1] = reader.GetBoolean(index1);
@@ -151,19 +148,18 @@ namespace DSServer
                     connection.Close();
             }
         }
-
-        public bool InsertData(string[] insertItem, object[] insertValue, string table)
+        public bool InsertData(string[] insertItems, object[] insertValues, string table)
         {
             try
             {
                 if (connection.State == System.Data.ConnectionState.Closed)
                     connection.Open();
                 StringBuilder sqlText = new StringBuilder();
-                sqlText.Append("INSERT INTO " + table + " (" + insertItem[0]);
-                int insertNumber = insertItem.Length;
+                sqlText.Append("INSERT INTO " + table + " (" + insertItems[0]);
+                int insertNumber = insertItems.Length;
                 for (int index1 = 1; index1 < insertNumber; index1++)
                 {
-                    sqlText.Append("," + insertItem[index1]);
+                    sqlText.Append("," + insertItems[index1]);
                 }
                 sqlText.Append(") values (@insertValue0");
                 for (int index1 = 1; index1 < insertNumber; index1++)
@@ -175,7 +171,7 @@ namespace DSServer
                 {
                     for (int index1 = 0; index1 < insertNumber; index1++)
                     {
-                        cmd.Parameters.AddWithValue("@insertValue" + index1.ToString(), insertValue[index1]);
+                        cmd.Parameters.AddWithValue("@insertValue" + index1.ToString(), insertValues[index1]);
                     }
                     if (cmd.ExecuteNonQuery() > 0)
                     {
@@ -194,26 +190,25 @@ namespace DSServer
                     connection.Close();
             }
         }
-
-        public bool UpdateDataByUniqueID(string uniqueID, string[] updateItem, object[] updateValue, string table)
+        public bool UpdateDataByUniqueID(int uniqueID, string[] updateItems, object[] updateValues, string table)
         {
             try
             {
                 if (connection.State == System.Data.ConnectionState.Closed)
                     connection.Open();
                 StringBuilder sqlText = new StringBuilder();
-                sqlText.Append("UPDATE " + table + " SET " + updateItem[0] + "=@updateValue0");
-                int updateNumber = updateItem.Length;
+                sqlText.Append("UPDATE " + table + " SET " + updateItems[0] + "=@updateValue0");
+                int updateNumber = updateItems.Length;
                 for (int index1 = 1; index1 < updateNumber; index1++)
                 {
-                    sqlText.Append("," + updateItem[index1] + "=@updateValue" + index1.ToString());
+                    sqlText.Append("," + updateItems[index1] + "=@updateValue" + index1.ToString());
                 }
                 sqlText.Append(" where UniqueID=@uniqueID");
                 using (MySqlCommand cmd = new MySqlCommand(sqlText.ToString(), connection))
                 {
                     for (int index1 = 0; index1 < updateNumber; index1++)
                     {
-                        cmd.Parameters.AddWithValue("@updateValue" + index1.ToString(), updateValue[index1]);
+                        cmd.Parameters.AddWithValue("@updateValue" + index1.ToString(), updateValues[index1]);
                     }
                     cmd.Parameters.AddWithValue("@uniqueID", uniqueID);
                     if (cmd.ExecuteNonQuery() > 0)
@@ -294,7 +289,6 @@ namespace DSServer
                     connection.Close();
             }
         }
-
         public SerializableSoul[] GetSoulList(int answerUniqueID)
         {
             try
@@ -327,7 +321,6 @@ namespace DSServer
                     connection.Close();
             }
         }
-
         public SerializableContainer[] GetContainerList(int soulUniqueID)
         {
             try
