@@ -5,6 +5,7 @@ using DSSerializable.CharacterStructure;
 using System;
 using DSSerializable.WorldLevelStructure;
 using DSProtocol;
+using System.Collections.Generic;
 
 public class EnterWorldGraphAction : MonoBehaviour {
 
@@ -35,7 +36,7 @@ public class EnterWorldGraphAction : MonoBehaviour {
         GUI.Label(new Rect(30, 50, 300, 20), projectToSceneResult);
     }
 
-    private void GetSoulListEventAction(bool getSoulListStatus, string debugMessage, SerializableSoul[] soulList)
+    private void GetSoulListEventAction(bool getSoulListStatus, string debugMessage, List<SerializableSoul> soulList)
     {
         if (getSoulListStatus)
         {
@@ -43,12 +44,9 @@ public class EnterWorldGraphAction : MonoBehaviour {
             {
                 Soul targetSoul = new Soul(soul, AnswerGlobal.Answer);
                 AnswerGlobal.Answer.SoulDictionary.Add(soul.UniqueID,targetSoul);
-                if(soul.UniqueID == AnswerGlobal.Answer.MainSoulUniqueID)
-                {
-                    AnswerGlobal.MainSoul = targetSoul;
-                }
             }
-            
+            AnswerGlobal.Answer.MainSoulUniqueID = soulList[0].UniqueID;
+            AnswerGlobal.MainSoul = AnswerGlobal.Answer.SoulDictionary[soulList[0].UniqueID];
             PhotonGlobal.PS.GetContainerList(AnswerGlobal.MainSoul);
             PhotonGlobal.PS.ActiveSoul(AnswerGlobal.MainSoul);
         }
@@ -57,7 +55,7 @@ public class EnterWorldGraphAction : MonoBehaviour {
             getSoulListResult = debugMessage;
         }
     }
-    private void GetContainerListEventAction(bool getContainerListStatus, string debugMessage, SerializableContainer[] containerList)
+    private void GetContainerListEventAction(bool getContainerListStatus, string debugMessage, List<SerializableContainer> containerList)
     {
         if (getContainerListStatus)
         {
@@ -66,11 +64,9 @@ public class EnterWorldGraphAction : MonoBehaviour {
             {
                 Container targetContainer = new Container(container);
                 mainSoul.ContainerDictionary.Add(container.UniqueID, targetContainer);
-                if(container.UniqueID == AnswerGlobal.MainSoul.MainContainerUniqueID)
-                {
-                    AnswerGlobal.MainContainer = targetContainer;
-                }
             }
+            mainSoul.MainContainerUniqueID = containerList[0].UniqueID;
+            AnswerGlobal.MainContainer = mainSoul.ContainerDictionary[containerList[0].UniqueID];
             PhotonGlobal.PS.ProjectToScene(AnswerGlobal.MainContainer, AnswerGlobal.MainContainer.LocationUniqueID);
         }
         else
@@ -85,9 +81,10 @@ public class EnterWorldGraphAction : MonoBehaviour {
             Container targetContainer = new Container(container);
             AnswerGlobal.Scene.ContainerDictionary.Add(container.UniqueID, targetContainer);
             targetContainer.GameObject = Instantiate(AnswerGlobal.containerPrefab, new Vector3(targetContainer.PositionX, targetContainer.PositionY, targetContainer.PositionZ), Quaternion.identity) as GameObject;
+            targetContainer.GameObject.GetComponent<CharacterName>().Name = targetContainer.Name;
         }
     }
-    private void GetSceneDataEventAction(bool getSceneDataStatus, string debugMessage, SerializableScene scene, SerializableContainer[] containers)
+    private void GetSceneDataEventAction(bool getSceneDataStatus, string debugMessage, SerializableScene scene, List<SerializableContainer> containers)
     {
         if (getSceneDataStatus)
         {
@@ -96,11 +93,13 @@ public class EnterWorldGraphAction : MonoBehaviour {
             {
                 Container targetContainer = new Container(container);
                 targetContainer.GameObject = Instantiate(AnswerGlobal.containerPrefab, new Vector3(targetContainer.PositionX, targetContainer.PositionY, targetContainer.PositionZ), Quaternion.identity) as GameObject;
+                targetContainer.GameObject.GetComponent<CharacterName>().Name = targetContainer.Name;
                 AnswerGlobal.Scene.ContainerDictionary.Add(container.UniqueID, targetContainer);
                 if(AnswerGlobal.MainContainer.UniqueID == container.UniqueID)
                 {
                     Camera.main.GetComponent<CameraFollow>().target = targetContainer.GameObject.transform;
                     AnswerGlobal.MainContainer = targetContainer;
+                    targetContainer.GameObject.tag = "Self";
                 }
             }
         }
@@ -143,12 +142,7 @@ public class EnterWorldGraphAction : MonoBehaviour {
             container.PositionX = positionX;
             container.PositionY = positionY;
             container.PositionZ = positionZ;
-            if(!container.Moving)
-            {
-                Rigidbody rigidbody = container.GameObject.GetComponent<Rigidbody>();
-                rigidbody.MovePosition(new Vector3(positionX, positionY, positionZ));
-                rigidbody.MoveRotation(Quaternion.Euler(0, eulerAngleY, 0));
-            }
+            container.SyncVector = (new Vector3(positionX, positionY, positionZ))- container.GameObject.transform.position;
         }
     }
     private void MoveTargetPositionEventAction(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ)
@@ -174,7 +168,7 @@ public class EnterWorldGraphAction : MonoBehaviour {
                     {
                         if(AnswerGlobal.Scene.ContainerDictionary.ContainsKey(containerUniqueID))
                         {
-                            messageController.MessageContent.Add("[場景] "+containerName+": "+message);
+                            messageController.AppendMessage("[場景] "+containerName+": "+message);
                             messageController.UpdateMessageBox();
                         }
                     }

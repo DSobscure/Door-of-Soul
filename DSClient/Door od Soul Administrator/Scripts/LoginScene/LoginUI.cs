@@ -4,6 +4,7 @@ using System;
 using DSSerializable.CharacterStructure;
 using DSSerializable.WorldLevelStructure;
 using System.Linq;
+using System.Collections.Generic;
 
 public class LoginUI : MonoBehaviour
 {
@@ -62,7 +63,7 @@ public class LoginUI : MonoBehaviour
         }
     }
 
-    private void ControlTheSceneEventAction(bool controlTheSceneStatus, string debugMessage, SerializableScene scene, SerializableContainer[] containers)
+    private void ControlTheSceneEventAction(bool controlTheSceneStatus, string debugMessage, SerializableScene scene, List<SerializableContainer> containers)
     {
         if (controlTheSceneStatus)
         {
@@ -70,7 +71,7 @@ public class LoginUI : MonoBehaviour
             foreach(SerializableContainer container in containers)
             {
                 Container targetContainer = new Container(container);
-                targetContainer.GameObject = Instantiate(SceneGlobal.containerPrefab, new Vector3(targetContainer.PositionX, targetContainer.PositionY, targetContainer.PositionZ), Quaternion.identity) as GameObject;
+                targetContainer.GameObject = Instantiate(SceneGlobal.containerPrefab, new Vector3(targetContainer.Position.x, targetContainer.Position.y, targetContainer.Position.z), Quaternion.identity) as GameObject;
                 SceneGlobal.Scene.ContainerDictionary.Add(container.UniqueID, targetContainer);
             }
             SceneGlobal.ControlTheSceneStatus = true;
@@ -88,7 +89,7 @@ public class LoginUI : MonoBehaviour
         {
             Container targetContainer = new Container(container);
             SceneGlobal.Scene.ContainerDictionary.Add(container.UniqueID, targetContainer);
-            targetContainer.GameObject = Instantiate(SceneGlobal.containerPrefab, new Vector3(targetContainer.PositionX, targetContainer.PositionY, targetContainer.PositionZ), Quaternion.identity) as GameObject;
+            targetContainer.GameObject = Instantiate(SceneGlobal.containerPrefab, new Vector3(targetContainer.Position.x, targetContainer.Position.y, targetContainer.Position.z), Quaternion.identity) as GameObject;
         }
     }
 
@@ -112,6 +113,7 @@ public class LoginUI : MonoBehaviour
         Scene scene = SceneGlobal.Scene;
         if (scene.UniqueID == sceneUniqueID && scene.ContainerDictionary.ContainsKey(containerUniqueID))
         {
+            Container container = scene.ContainerDictionary[containerUniqueID];
             scene.ContainerDictionary[containerUniqueID].TargetPostion = new Vector3(positionX, positionY, positionZ);
             scene.ContainerDictionary[containerUniqueID].Moving = true;
         }

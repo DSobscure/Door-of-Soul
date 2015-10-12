@@ -1,11 +1,13 @@
 ﻿using System;
+using Newtonsoft.Json;
 
 namespace DSSerializable.WorldLevelStructure
 {
-    [Serializable]
     public class SerializableScene
     {
-        public int UniqueID { get; protected set; }
+        [JsonProperty("UniqueID")]
+        public int UniqueID { get; set; }
+        [JsonProperty("Name")]
         public string Name { get; set; }
 
         public SerializableScene(int uniqueID, string name)

@@ -1,23 +1,25 @@
 ﻿using System;
+using Newtonsoft.Json;
 
 namespace DSSerializable.CharacterStructure
 {
-    [Serializable]
     public class SerializableContainer
     {
+        [JsonProperty("UniqueID")]
         public int UniqueID { get; protected set; }
+        [JsonProperty("Name")]
         public string Name { get; set; }
+        [JsonProperty("LocationUniqueID")]
         public int LocationUniqueID { get; set; }
 
-        public float PositionX { get { return Convert.ToSingle(_positionX); } }
-        public float PositionY { get { return Convert.ToSingle(_positionY); } }
-        public float PositionZ { get { return Convert.ToSingle(_positionZ); } }
-        public float EulerAngleY { get { return Convert.ToSingle(_eulerAngleY); } }
-
-        private string _positionX;
-        private string _positionY;
-        private string _positionZ;
-        private string _eulerAngleY;
+        [JsonProperty("PositionX")]
+        public float PositionX { get; set; }
+        [JsonProperty("PositionY")]
+        public float PositionY { get; set; }
+        [JsonProperty("PositionZ")]
+        public float PositionZ { get; set; }
+        [JsonProperty("EulerAngleY")]
+        public float EulerAngleY { get; set; }
 
 
         public SerializableContainer(int uniqueID, string name, int locationUniqueID, float postionX, float positionY, float positionZ, float eulerAngleY)
@@ -25,10 +27,10 @@ namespace DSSerializable.CharacterStructure
             UniqueID = uniqueID;
             Name = name;
             LocationUniqueID = locationUniqueID;
-            _positionX = postionX.ToString();
-            _positionY = positionY.ToString();
-            _positionZ = positionZ.ToString();
-            _eulerAngleY = eulerAngleY.ToString();
+            PositionX = postionX;
+            PositionY = positionY;
+            PositionZ = positionZ;
+            EulerAngleY = eulerAngleY;
         }
     }
 }

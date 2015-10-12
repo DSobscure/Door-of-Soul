@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using Photon.SocketServer;
-using PhotonHostRuntimeInterfaces;
-using ExitGames.Logging;
 using DSDataStructure;
 using DSProtocol;
 using DSSerializable.CharacterStructure;
-using DSSerializable;
+using DSSerializable.WorldLevelStructure;
 using DSDataStructure.WorldLevelStructure;
+using Newtonsoft.Json;
 
 namespace DSServer
 {
@@ -16,19 +15,17 @@ namespace DSServer
     {
         private bool OpenDS(int answerUniqueID)
         {
-            string[] requestItem = new string[3];
+            string[] requestItem = new string[2];
             requestItem[0] = "Name";
             requestItem[1] = "SoulLimit";
-            requestItem[2] = "MainSoulUniqueID";
 
-            TypeCode[] requestType = new TypeCode[3];
+            TypeCode[] requestType = new TypeCode[2];
             requestType[0] = TypeCode.String;
             requestType[1] = TypeCode.Int32;
-            requestType[2] = TypeCode.Int32;
 
             object[] returnData = server.database.GetDataByUniqueID(answerUniqueID, requestItem, requestType, "answer");
 
-            Answer = new Answer(answerUniqueID, (string)returnData[0], (int)returnData[1], (int)returnData[2], this);
+            Answer = new Answer(answerUniqueID, (string)returnData[0], (int)returnData[1], this);
 
             if (server.WandererDictionary.ContainsKey(guid))
             {
@@ -38,18 +35,18 @@ namespace DSServer
 
             return true;
         }
-        private string RegisterSoulData(int answerUniqueID)
+        private List<SerializableSoul> RegisterSoulData(int answerUniqueID)
         {
-            SerializableSoul[] soulList = server.database.GetSoulList(answerUniqueID);
+            List<SerializableSoul> soulList = server.database.GetSoulList(answerUniqueID);
             foreach (SerializableSoul soul in soulList)
             {
                 Answer.SoulDictionary.Add(soul.UniqueID, new Soul(soul, Answer));
             }
-            return SerializeFunction.SerializeObject(soulList);
+            return soulList;
         }
-        private string RegisterContainerData(int soulUniqueID)
+        private List<SerializableContainer> RegisterContainerData(int soulUniqueID)
         {
-            SerializableContainer[] containerList = server.database.GetContainerList(soulUniqueID);
+            List<SerializableContainer> containerList = server.database.GetContainerList(soulUniqueID);
             foreach (SerializableContainer container in containerList)
             {
                 Container soulContainer = new Container(container, server.SceneDictionary[container.LocationUniqueID]);
@@ -57,7 +54,7 @@ namespace DSServer
                 Answer.SoulDictionary[soulUniqueID].ContainerDictionary.Add(container.UniqueID, soulContainer);
                 server.ContainerDictionary.Add(container.UniqueID, soulContainer);
             }
-            return SerializeFunction.SerializeObject(containerList);
+            return containerList;
         }
         private bool ActiveSoul_and_Broadcast(int soulUniqueID, Dictionary<byte, object> parameters)
         {
@@ -97,7 +94,7 @@ namespace DSServer
                 Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
                                             {(byte)ProjectContainerBroadcastItem.SceneUniqueID,scene.UniqueID},
-                                            {(byte)ProjectContainerBroadcastItem.ContainerDataString,SerializeFunction.SerializeObject(container.Serialize())}
+                                            {(byte)ProjectContainerBroadcastItem.ContainerDataString,JsonConvert.SerializeObject(container.Serialize(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })}
                                         };
                 HashSet<DSPeer> peers = new HashSet<DSPeer>();
                 foreach (Container targetContainer in scene.ContainerDictionary.Values)
@@ -118,28 +115,28 @@ namespace DSServer
                 return false;
             }
         }
-        private bool GetSceneData(int sceneUniqueID, out string sceneDataString, out string containersDataString)
+        private bool GetSceneData(int sceneUniqueID, out SerializableScene scene, out SerializableContainer[] containers)
         {
             if (server.SceneDictionary.ContainsKey(sceneUniqueID))
             {
-                Scene scene = server.SceneDictionary[sceneUniqueID];
+                Scene targetScene = server.SceneDictionary[sceneUniqueID];
                 List<SerializableContainer> containerList = new List<SerializableContainer>();
-                foreach (Container container in scene.ContainerDictionary.Values)
+                foreach (Container container in targetScene.ContainerDictionary.Values)
                 {
                     containerList.Add(container.Serialize());
                 }
-                sceneDataString = SerializeFunction.SerializeObject(scene.Serialize());
-                containersDataString = SerializeFunction.SerializeObject(containerList.ToArray());
+                scene = targetScene.Serialize();
+                containers = containerList.ToArray();
                 return true;
             }
             else
             {
-                sceneDataString = "";
-                containersDataString = "";
+                scene = null;
+                containers = null;
                 return false;
             }
         }
-        private bool ControlTheScene(int administratorUniqueID, int sceneUniqueID, out string sceneDataString, out string containersDataString)
+        private bool ControlTheScene(int administratorUniqueID, int sceneUniqueID, out  SerializableScene scene, out SerializableContainer[] containers)
         {
             if (server.SceneDictionary.ContainsKey(sceneUniqueID))
             {
@@ -152,14 +149,14 @@ namespace DSServer
                 {
                     containerList.Add(container.Serialize());
                 }
-                sceneDataString = SerializeFunction.SerializeObject(server.SceneDictionary[sceneUniqueID].Serialize());
-                containersDataString = SerializeFunction.SerializeObject(containerList.ToArray());
+                scene = server.SceneDictionary[sceneUniqueID].Serialize();
+                containers = containerList.ToArray();
                 return true;
             }
             else
             {
-                sceneDataString = "";
-                containersDataString = "";
+                scene = null;
+                containers = null;
                 return false;
             }
         }
@@ -281,9 +278,9 @@ namespace DSServer
                 }
                 Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)DisconnectBroadcastItem.SoulUniqueIDListDataString,SerializeFunction.SerializeObject(soulUniqueIDList.ToArray())},
-                                            {(byte)DisconnectBroadcastItem.SceneUniqueIDListDataString,SerializeFunction.SerializeObject(sceneUniqueIDList.ToArray())},
-                                            {(byte)DisconnectBroadcastItem.ContainerUniqueIDListDataString,SerializeFunction.SerializeObject(containerUniqueIDList.ToArray())}
+                                            {(byte)DisconnectBroadcastItem.SoulUniqueIDListDataString, JsonConvert.SerializeObject(soulUniqueIDList.ToArray(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })},
+                                            {(byte)DisconnectBroadcastItem.SceneUniqueIDListDataString, JsonConvert.SerializeObject(sceneUniqueIDList.ToArray(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })},
+                                            {(byte)DisconnectBroadcastItem.ContainerUniqueIDListDataString, JsonConvert.SerializeObject(containerUniqueIDList.ToArray(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })}
                                         };
                 HashSet<DSPeer> peers = new HashSet<DSPeer>();
                 foreach (Answer answer in server.AnswerDictionary.Values)

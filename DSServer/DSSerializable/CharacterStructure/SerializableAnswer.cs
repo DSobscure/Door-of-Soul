@@ -1,21 +1,22 @@
 ﻿using System;
+using Newtonsoft.Json;
 
 namespace DSSerializable.CharacterStructure
 {
-    [Serializable]
     public class SerializableAnswer
     {
-        public int UniqueID { get; protected set; }
+        [JsonProperty("UniqueID")]
+        public int UniqueID { get; set; }
+        [JsonProperty("Name")]
         public string Name { get; set; }
-        public int SoulLimit { get; protected set; }
-        public int MainSoulUniqueID { get; set; }
+        [JsonProperty("SoulLimit")]
+        public int SoulLimit { get; set; }
 
-        public SerializableAnswer(int uniqueID, string name, int soulLimit, int mainSoulUniqueID)
+        public SerializableAnswer(int uniqueID, string name, int soulLimit)
         {
             UniqueID = uniqueID;
             Name = name;
             SoulLimit = soulLimit;
-            MainSoulUniqueID = mainSoulUniqueID;
         }
     }
 }

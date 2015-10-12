@@ -6,6 +6,7 @@ using DSProtocol;
 using DSSerializable;
 using DSSerializable.CharacterStructure;
 using DSSerializable.WorldLevelStructure;
+using Newtonsoft.Json;
 
 public partial class PhotonService : IPhotonPeerListener
 {
@@ -151,8 +152,8 @@ public partial class PhotonService : IPhotonPeerListener
                 (
                     controlTheSceneStatus: true,
                     debugMessage: "",
-                    scene: SerializeFunction.DeserializeObject<SerializableScene>((string)operationResponse.Parameters[(byte)GetSceneDataResponseItem.SceneDataString]),
-                    containers: SerializeFunction.DeserializeObject<SerializableContainer[]>((string)operationResponse.Parameters[(byte)GetSceneDataResponseItem.ContainersDataString])
+                    scene: JsonConvert.DeserializeObject<SerializableScene>((string)operationResponse.Parameters[(byte)GetSceneDataResponseItem.SceneDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto }),
+                    containers: JsonConvert.DeserializeObject<List<SerializableContainer>>((string)operationResponse.Parameters[(byte)GetSceneDataResponseItem.ContainersDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })
                 );
         }
         else
@@ -176,7 +177,7 @@ public partial class PhotonService : IPhotonPeerListener
         if(eventData.Parameters.Count == 2)
         {
             int sceneUniqueID = (int)eventData.Parameters[(byte)ProjectContainerBroadcastItem.SceneUniqueID];
-            SerializableContainer container = SerializeFunction.DeserializeObject<SerializableContainer>((string)eventData.Parameters[(byte)ProjectContainerBroadcastItem.ContainerDataString]);
+            SerializableContainer container = JsonConvert.DeserializeObject<SerializableContainer>((string)eventData.Parameters[(byte)ProjectContainerBroadcastItem.ContainerDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
             if (sceneUniqueID == SceneGlobal.Scene.UniqueID)
                 ProjectContainerToSceneEvent(sceneUniqueID, container);
         }
@@ -190,9 +191,9 @@ public partial class PhotonService : IPhotonPeerListener
     {
         if(eventData.Parameters.Count == 3)
         {
-            int[] soulUniqueIDList = SerializeFunction.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.SoulUniqueIDListDataString]);
-            int[] sceneUniqueIDList = SerializeFunction.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.SceneUniqueIDListDataString]);
-            int[] containerUniqueIDList = SerializeFunction.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.ContainerUniqueIDListDataString]);
+            int[] soulUniqueIDList = JsonConvert.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.SoulUniqueIDListDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
+            int[] sceneUniqueIDList = JsonConvert.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.SceneUniqueIDListDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
+            int[] containerUniqueIDList = JsonConvert.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.ContainerUniqueIDListDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
             DisconnectEvent(soulUniqueIDList, sceneUniqueIDList, containerUniqueIDList);
         }
         else
@@ -236,7 +237,7 @@ public partial class PhotonService : IPhotonPeerListener
             throw EX;
         }
     }
-    public void ContainerPositionUpdate(int sceneUniqueID,int containerUniqueID,float positionX,float positionY,float positionZ)
+    public void ContainerPositionUpdate(int sceneUniqueID,int containerUniqueID,float positionX,float positionY,float positionZ,float eulerAngleY)
     {
         try
         {
@@ -245,7 +246,8 @@ public partial class PhotonService : IPhotonPeerListener
                              {(byte)ContainerPositionUpdateParameterItem.ContainerUniqueID,containerUniqueID},
                              {(byte)ContainerPositionUpdateParameterItem.PositionX,positionX},
                              {(byte)ContainerPositionUpdateParameterItem.PositionY,positionY},
-                             {(byte)ContainerPositionUpdateParameterItem.PositionZ,positionZ}
+                             {(byte)ContainerPositionUpdateParameterItem.PositionZ,positionZ},
+                             {(byte)ContainerPositionUpdateParameterItem.EulerAngleY,eulerAngleY}
                         };
 
             this.peer.OpCustom((byte)OperationType.ContainerPositionUpdate, parameter, true, 0, true);

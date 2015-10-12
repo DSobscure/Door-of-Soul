@@ -192,40 +192,43 @@ namespace DSServer
         }
         public bool UpdateDataByUniqueID(int uniqueID, string[] updateItems, object[] updateValues, string table)
         {
-            try
+            lock(connection)
             {
-                if (connection.State == System.Data.ConnectionState.Closed)
-                    connection.Open();
-                StringBuilder sqlText = new StringBuilder();
-                sqlText.Append("UPDATE " + table + " SET " + updateItems[0] + "=@updateValue0");
-                int updateNumber = updateItems.Length;
-                for (int index1 = 1; index1 < updateNumber; index1++)
+                try
                 {
-                    sqlText.Append("," + updateItems[index1] + "=@updateValue" + index1.ToString());
+                    if (connection.State == System.Data.ConnectionState.Closed)
+                        connection.Open();
+                    StringBuilder sqlText = new StringBuilder();
+                    sqlText.Append("UPDATE " + table + " SET " + updateItems[0] + "=@updateValue0");
+                    int updateNumber = updateItems.Length;
+                    for (int index1 = 1; index1 < updateNumber; index1++)
+                    {
+                        sqlText.Append("," + updateItems[index1] + "=@updateValue" + index1.ToString());
+                    }
+                    sqlText.Append(" where UniqueID=@uniqueID");
+                    using (MySqlCommand cmd = new MySqlCommand(sqlText.ToString(), connection))
+                    {
+                        for (int index1 = 0; index1 < updateNumber; index1++)
+                        {
+                            cmd.Parameters.AddWithValue("@updateValue" + index1.ToString(), updateValues[index1]);
+                        }
+                        cmd.Parameters.AddWithValue("@uniqueID", uniqueID);
+                        if (cmd.ExecuteNonQuery() > 0)
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
                 }
-                sqlText.Append(" where UniqueID=@uniqueID");
-                using (MySqlCommand cmd = new MySqlCommand(sqlText.ToString(), connection))
+                catch (Exception ex)
                 {
-                    for (int index1 = 0; index1 < updateNumber; index1++)
-                    {
-                        cmd.Parameters.AddWithValue("@updateValue" + index1.ToString(), updateValues[index1]);
-                    }
-                    cmd.Parameters.AddWithValue("@uniqueID", uniqueID);
-                    if (cmd.ExecuteNonQuery() > 0)
-                    {
-                        return true;
-                    }
+                    throw ex;
                 }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-            finally
-            {
-                if (connection.State == System.Data.ConnectionState.Open)
-                    connection.Close();
+                finally
+                {
+                    if (connection.State == System.Data.ConnectionState.Open)
+                        connection.Close();
+                }
             }
         }
 
@@ -261,8 +264,7 @@ namespace DSServer
                     using (MySqlCommand cmd = new MySqlCommand(sqlText, connection))
                     {
                         cmd.Parameters.AddWithValue("@account", account);
-                        //cmd.Parameters.AddWithValue("@password", _passwordSHA512);
-                        cmd.Parameters.AddWithValue("@password", password);
+                        cmd.Parameters.AddWithValue("@password", passwordSHA512);
                         using (MySqlDataReader reader = cmd.ExecuteReader())
                         {
                             if (reader.Read())
@@ -289,14 +291,14 @@ namespace DSServer
                     connection.Close();
             }
         }
-        public SerializableSoul[] GetSoulList(int answerUniqueID)
+        public List<SerializableSoul> GetSoulList(int answerUniqueID)
         {
             try
             {
                 if (connection.State == System.Data.ConnectionState.Closed)
                     connection.Open();
 
-                String sqlText = "SELECT UniqueID,Name,MainContainerUniqueID FROM soul WHERE AnswerUniqueID = @answerUniqueID";
+                String sqlText = "SELECT UniqueID,Name FROM soul WHERE AnswerUniqueID = @answerUniqueID";
                 using (MySqlCommand cmd = new MySqlCommand(sqlText, connection))
                 {
                     cmd.Parameters.AddWithValue("@answerUniqueID", answerUniqueID);
@@ -305,9 +307,9 @@ namespace DSServer
                         List<SerializableSoul> soulList = new List<SerializableSoul>();
                         while(reader.Read())
                         {
-                            soulList.Add(new SerializableSoul(reader.GetInt32(0), reader.GetString(1),reader.GetInt32(2)));
+                            soulList.Add(new SerializableSoul(reader.GetInt32(0), reader.GetString(1)));
                         }
-                        return soulList.ToArray();
+                        return soulList;
                     }
                 }
             }
@@ -321,7 +323,7 @@ namespace DSServer
                     connection.Close();
             }
         }
-        public SerializableContainer[] GetContainerList(int soulUniqueID)
+        public List<SerializableContainer> GetContainerList(int soulUniqueID)
         {
             try
             {
@@ -339,7 +341,7 @@ namespace DSServer
                         {
                             containerList.Add(new SerializableContainer(reader.GetInt32(0), reader.GetString(1), reader.GetInt32(2),reader.GetFloat(3),reader.GetFloat(4),reader.GetFloat(5),reader.GetFloat(6)));
                         }
-                        return containerList.ToArray();
+                        return containerList;
                     }
                 }
             }

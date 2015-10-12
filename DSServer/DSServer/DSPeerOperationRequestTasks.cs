@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using Photon.SocketServer;
-using PhotonHostRuntimeInterfaces;
-using ExitGames.Logging;
 using DSDataStructure;
 using DSProtocol;
 using DSSerializable.CharacterStructure;
-using DSSerializable;
-using DSDataStructure.WorldLevelStructure;
+using DSSerializable.WorldLevelStructure;
+using Newtonsoft.Json;
 
 namespace DSServer
 {
@@ -39,7 +35,7 @@ namespace DSServer
                         {
                             Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)OpenDSResponseItem.AnswerDataString,SerializeFunction.SerializeObject(Answer.Serialize())}
+                                            {(byte)OpenDSResponseItem.AnswerDataString,JsonConvert.SerializeObject(Answer.Serialize(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })}
                                         };
 
                             OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
@@ -106,10 +102,10 @@ namespace DSServer
                 }
                 else
                 {
-                    string soulListDataString = RegisterSoulData(answerUniqueID);
+                    List<SerializableSoul> soulList = RegisterSoulData(answerUniqueID);
                     Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)GetSoulListResponseItem.SoulListDataString,soulListDataString}
+                                            {(byte)GetSoulListResponseItem.SoulListDataString,JsonConvert.SerializeObject(soulList, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })}
                                         };
 
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
@@ -147,10 +143,10 @@ namespace DSServer
                 }
                 else
                 {
-                    string containerListDataString = RegisterContainerData(soulUniqueID);
+                    List<SerializableContainer> containerList = RegisterContainerData(soulUniqueID);
                     Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)GetContainerListResponseItem.ContainerListDataString,containerListDataString}
+                                            {(byte)GetContainerListResponseItem.ContainerListDataString,JsonConvert.SerializeObject(containerList, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })}
                                         };
 
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
@@ -259,13 +255,14 @@ namespace DSServer
             else
             {
                 int sceneUniqueID = (int)operationRequest.Parameters[(byte)GetSceneDataParameterItem.SceneUniqueID];
-                string sceneDataString, containersDataString;
-                if (GetSceneData(sceneUniqueID, out sceneDataString, out containersDataString))
+                SerializableScene scene;
+                SerializableContainer[] containers;
+                if (GetSceneData(sceneUniqueID, out scene, out containers))
                 {
                     Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)GetSceneDataResponseItem.SceneDataString,sceneDataString},
-                                            {(byte)GetSceneDataResponseItem.ContainersDataString,containersDataString}
+                                            {(byte)GetSceneDataResponseItem.SceneDataString,JsonConvert.SerializeObject(scene, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })},
+                                            {(byte)GetSceneDataResponseItem.ContainersDataString,JsonConvert.SerializeObject(containers, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })}
                                         };
 
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)
@@ -302,13 +299,14 @@ namespace DSServer
             {
                 int administratorUniqueID = (int)operationRequest.Parameters[(byte)ControlTheSceneParameterItem.AdministratorUniqueID];
                 int sceneUniqueID = (int)operationRequest.Parameters[(byte)ControlTheSceneParameterItem.SceneUniqueID];
-                string sceneDataString, containersDataString;
-                if (ControlTheScene(administratorUniqueID, sceneUniqueID, out sceneDataString, out containersDataString))
+                SerializableScene scene;
+                SerializableContainer[] containers;
+                if (ControlTheScene(administratorUniqueID, sceneUniqueID, out scene, out containers))
                 {
                     Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)ControlTheSceneResponseItem.SceneDataString,sceneDataString},
-                                            {(byte)ControlTheSceneResponseItem.ContainersDataString,containersDataString}
+                                            {(byte)ControlTheSceneResponseItem.SceneDataString,JsonConvert.SerializeObject(scene, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })},
+                                            {(byte)ControlTheSceneResponseItem.ContainersDataString,JsonConvert.SerializeObject(containers, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })}
                                         };
 
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode, parameter)

@@ -6,6 +6,7 @@ using DSProtocol;
 using DSSerializable;
 using DSSerializable.CharacterStructure;
 using DSSerializable.WorldLevelStructure;
+using Newtonsoft.Json;
 
 public partial class PhotonService : IPhotonPeerListener
 {
@@ -210,7 +211,7 @@ public partial class PhotonService : IPhotonPeerListener
     {
         if (operationResponse.ReturnCode == (short)ErrorType.Correct)
         {
-            OpenDSEvent(true, "", SerializeFunction.DeserializeObject<SerializableAnswer>((string)operationResponse.Parameters[(byte)OpenDSResponseItem.AnswerDataString]));
+            OpenDSEvent(true, "", JsonConvert.DeserializeObject<SerializableAnswer>((string)operationResponse.Parameters[(byte)OpenDSResponseItem.AnswerDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto }));
         }
         else
         {
@@ -222,7 +223,7 @@ public partial class PhotonService : IPhotonPeerListener
     {
         if (operationResponse.ReturnCode == (short)ErrorType.Correct)
         {
-            GetSoulListEvent(true, "", SerializeFunction.DeserializeObject<SerializableSoul[]>((string)operationResponse.Parameters[(byte)GetSoulListResponseItem.SoulListDataString]));
+            GetSoulListEvent(true, "", JsonConvert.DeserializeObject<List<SerializableSoul>>((string)operationResponse.Parameters[(byte)GetSoulListResponseItem.SoulListDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto }));
         }
         else
         {
@@ -234,7 +235,7 @@ public partial class PhotonService : IPhotonPeerListener
     {
         if (operationResponse.ReturnCode == (short)ErrorType.Correct)
         {
-            GetContainerListEvent(true, "", SerializeFunction.DeserializeObject<SerializableContainer[]>((string)operationResponse.Parameters[(byte)GetContainerListResponseItem.ContainerListDataString]));
+            GetContainerListEvent(true, "", JsonConvert.DeserializeObject<List<SerializableContainer>>((string)operationResponse.Parameters[(byte)GetContainerListResponseItem.ContainerListDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto }));
         }
         else
         {
@@ -269,8 +270,8 @@ public partial class PhotonService : IPhotonPeerListener
                 (
                     getSceneDataStatus: true,
                     debugMessage: "",
-                    scene: SerializeFunction.DeserializeObject<SerializableScene>((string)operationResponse.Parameters[(byte)GetSceneDataResponseItem.SceneDataString]),
-                    containers: SerializeFunction.DeserializeObject<SerializableContainer[]>((string)operationResponse.Parameters[(byte)GetSceneDataResponseItem.ContainersDataString])
+                    scene: JsonConvert.DeserializeObject<SerializableScene>((string)operationResponse.Parameters[(byte)GetSceneDataResponseItem.SceneDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto }),
+                    containers: JsonConvert.DeserializeObject<List<SerializableContainer>>((string)operationResponse.Parameters[(byte)GetSceneDataResponseItem.ContainersDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })
                 );
         }
         else
@@ -293,7 +294,7 @@ public partial class PhotonService : IPhotonPeerListener
         if(eventData.Parameters.Count == 2)
         {
             int sceneUniqueID = (int)eventData.Parameters[(byte)ProjectContainerBroadcastItem.SceneUniqueID];
-            SerializableContainer container = SerializeFunction.DeserializeObject<SerializableContainer>((string)eventData.Parameters[(byte)ProjectContainerBroadcastItem.ContainerDataString]);
+            SerializableContainer container = JsonConvert.DeserializeObject<SerializableContainer>((string)eventData.Parameters[(byte)ProjectContainerBroadcastItem.ContainerDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
             if (container.UniqueID != AnswerGlobal.MainContainer.UniqueID)
                 ProjectContainerToSceneEvent(sceneUniqueID, container);
         }
@@ -318,9 +319,9 @@ public partial class PhotonService : IPhotonPeerListener
     {
         if(eventData.Parameters.Count == 3)
         {
-            int[] soulUniqueIDList = SerializeFunction.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.SoulUniqueIDListDataString]);
-            int[] sceneUniqueIDList = SerializeFunction.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.SceneUniqueIDListDataString]);
-            int[] containerUniqueIDList = SerializeFunction.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.ContainerUniqueIDListDataString]);
+            int[] soulUniqueIDList = JsonConvert.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.SoulUniqueIDListDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
+            int[] sceneUniqueIDList = JsonConvert.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.SceneUniqueIDListDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
+            int[] containerUniqueIDList = JsonConvert.DeserializeObject<int[]>((string)eventData.Parameters[(byte)DisconnectBroadcastItem.ContainerUniqueIDListDataString], new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
             DisconnectEvent(soulUniqueIDList, sceneUniqueIDList, containerUniqueIDList);
         }
         else

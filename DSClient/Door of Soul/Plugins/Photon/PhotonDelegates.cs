@@ -1,6 +1,7 @@
 ﻿using DSSerializable.CharacterStructure;
 using DSSerializable.WorldLevelStructure;
 using DSProtocol;
+using System.Collections.Generic;
 
 public partial class PhotonService
 {
@@ -10,10 +11,10 @@ public partial class PhotonService
     public delegate void OpenDSEventHandler(bool openDSStatus, string debugMessage, SerializableAnswer answer);
     public event OpenDSEventHandler OpenDSEvent;
 
-    public delegate void GetSoulListEventHandler(bool getSoulListStatus, string debugMessage, SerializableSoul[] soulList);
+    public delegate void GetSoulListEventHandler(bool getSoulListStatus, string debugMessage, List<SerializableSoul> soulList);
     public event GetSoulListEventHandler GetSoulListEvent;
 
-    public delegate void GetContainerListEventHandler(bool getContainerListStatus, string debugMessage, SerializableContainer[] containerList);
+    public delegate void GetContainerListEventHandler(bool getContainerListStatus, string debugMessage, List<SerializableContainer> containerList);
     public event GetContainerListEventHandler GetContainerListEvent;
 
     public delegate void ProjectToSceneEventHandler(bool projectToSceneStatus, string debugMessage);
@@ -21,7 +22,7 @@ public partial class PhotonService
 
     
 
-    public delegate void GetSceneDataEventHandler(bool getSceneDataStatus, string debugMessage, SerializableScene scene, SerializableContainer[] containers);
+    public delegate void GetSceneDataEventHandler(bool getSceneDataStatus, string debugMessage, SerializableScene scene, List<SerializableContainer> containers);
     public event GetSceneDataEventHandler GetSceneDataEvent;
 
     //event

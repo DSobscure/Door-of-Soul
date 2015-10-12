@@ -1,12 +1,13 @@
 ﻿using DSSerializable.CharacterStructure;
 using DSSerializable.WorldLevelStructure;
+using System.Collections.Generic;
 
 public partial class PhotonService
 {
     public delegate void ConnectEventHandler(bool connectStatus);
     public event ConnectEventHandler ConnectEvent;
 
-    public delegate void ControlTheSceneEventHandler(bool controlTheSceneStatus, string debugMessage, SerializableScene scene, SerializableContainer[] containers);
+    public delegate void ControlTheSceneEventHandler(bool controlTheSceneStatus, string debugMessage, SerializableScene scene, List<SerializableContainer> containers);
     public event ControlTheSceneEventHandler ControlTheSceneEvent;
 
     //event
