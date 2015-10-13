@@ -1,14 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using Photon.SocketServer;
 using PhotonHostRuntimeInterfaces;
 using ExitGames.Logging;
-using DSDataStructure;
-using DSProtocol;
-using DSSerializable.CharacterStructure;
-using DSSerializable;
-using DSDataStructure.WorldLevelStructure;
+using DSServerStructure;
+using DSCommunicationProtocol;
 
 namespace DSServer
 {
@@ -41,7 +36,11 @@ namespace DSServer
 
         protected override void OnOperationRequest(OperationRequest operationRequest, SendParameters sendParameters)
         {
-            switch(operationRequest.OperationCode)
+            if (Answer == null)
+                DSServer.Log.Info(guid + ":" + ((OperationType)operationRequest.OperationCode).ToString());
+            else
+                DSServer.Log.Info(Answer.name + ":" + ((OperationType)operationRequest.OperationCode).ToString());
+            switch (operationRequest.OperationCode)
             {
                 #region open DS
                 case (byte)OperationType.OpenDS:

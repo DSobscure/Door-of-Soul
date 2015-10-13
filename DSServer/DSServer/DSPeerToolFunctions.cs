@@ -4,11 +4,11 @@ using System.Linq;
 using Photon.SocketServer;
 using PhotonHostRuntimeInterfaces;
 using ExitGames.Logging;
-using DSDataStructure;
-using DSProtocol;
+using DSServerStructure;
+using DSCommunicationProtocol;
 using DSSerializable.CharacterStructure;
 using DSSerializable;
-using DSDataStructure.WorldLevelStructure;
+using DSServerStructure.WorldLevelStructure;
 
 namespace DSServer
 {
@@ -21,11 +21,11 @@ namespace DSServer
             {
                 case MessageLevel.Scene:
                     {
-                        foreach (Container targetContainer in container.Location.ContainerDictionary.Values)
+                        foreach (Container targetContainer in container.location.containerDictionary.Values)
                         {
-                            foreach (Soul targetSoul in targetContainer.SoulDictionary.Values)
+                            foreach (Soul targetSoul in targetContainer.soulDictionary.Values)
                             {
-                                peers.Add(targetSoul.SourceAnswer.Peer);
+                                peers.Add(targetSoul.sourceAnswer.peer);
                             }
                         }
                     }

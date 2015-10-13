@@ -9,11 +9,5 @@ namespace DSSerializable.WorldLevelStructure
         public int UniqueID { get; set; }
         [JsonProperty("Name")]
         public string Name { get; set; }
-
-        public SerializableScene(int uniqueID, string name)
-        {
-            UniqueID = uniqueID;
-            Name = name;
-        }
     }
 }

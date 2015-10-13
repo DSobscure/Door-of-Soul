@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using Photon.SocketServer;
-using DSDataStructure;
-using DSProtocol;
+using DSServerStructure;
+using DSCommunicationProtocol;
 using DSSerializable.CharacterStructure;
 using DSSerializable.WorldLevelStructure;
-using DSDataStructure.WorldLevelStructure;
+using DSServerStructure.WorldLevelStructure;
 using Newtonsoft.Json;
 
 namespace DSServer
@@ -40,7 +40,7 @@ namespace DSServer
             List<SerializableSoul> soulList = server.database.GetSoulList(answerUniqueID);
             foreach (SerializableSoul soul in soulList)
             {
-                Answer.SoulDictionary.Add(soul.UniqueID, new Soul(soul, Answer));
+                Answer.soulDictionary.Add(soul.UniqueID, new Soul(soul, Answer));
             }
             return soulList;
         }
@@ -50,25 +50,25 @@ namespace DSServer
             foreach (SerializableContainer container in containerList)
             {
                 Container soulContainer = new Container(container, server.SceneDictionary[container.LocationUniqueID]);
-                soulContainer.SoulDictionary.Add(soulUniqueID, Answer.SoulDictionary[soulUniqueID]);
-                Answer.SoulDictionary[soulUniqueID].ContainerDictionary.Add(container.UniqueID, soulContainer);
+                soulContainer.soulDictionary.Add(soulUniqueID, Answer.soulDictionary[soulUniqueID]);
+                Answer.soulDictionary[soulUniqueID].containerDictionary.Add(container.UniqueID, soulContainer);
                 server.ContainerDictionary.Add(container.UniqueID, soulContainer);
             }
             return containerList;
         }
         private bool ActiveSoul_and_Broadcast(int soulUniqueID, Dictionary<byte, object> parameters)
         {
-            if (Answer.SoulDictionary[soulUniqueID].Active)
+            if (Answer.soulDictionary[soulUniqueID].Active)
             {
                 return false;
             }
             else
             {
-                Answer.SoulDictionary[soulUniqueID].Active = true;
+                Answer.soulDictionary[soulUniqueID].Active = true;
                 HashSet<DSPeer> peers = new HashSet<DSPeer>();
                 foreach (Answer answer in server.AnswerDictionary.Values)
                 {
-                    peers.Add(answer.Peer);
+                    peers.Add(answer.peer);
                 }
                 server.Broadcast(peers.ToArray(), BroadcastType.ActiveSoul, parameters);
                 return true;
@@ -76,13 +76,13 @@ namespace DSServer
         }
         private bool ProjectToScene(int sceneUniqueID, int containerUniqueID)
         {
-            if (server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
+            if (server.SceneDictionary[sceneUniqueID].containerDictionary.ContainsKey(containerUniqueID))
             {
                 return false;
             }
             else
             {
-                Container container = Answer.SoulDictionary.First(pair => pair.Value.ContainerDictionary.ContainsKey(containerUniqueID)).Value.ContainerDictionary[containerUniqueID];
+                Container container = Answer.soulDictionary.First(pair => pair.Value.containerDictionary.ContainsKey(containerUniqueID)).Value.containerDictionary[containerUniqueID];
                 return ProjectContainerToScene_and_Broadcast(container, server.SceneDictionary[sceneUniqueID]);
             }
         }
@@ -90,22 +90,22 @@ namespace DSServer
         {
             try
             {
-                scene.ContainerDictionary.Add(container.UniqueID, container);
+                scene.containerDictionary.Add(container.uniqueID, container);
                 Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)ProjectContainerBroadcastItem.SceneUniqueID,scene.UniqueID},
+                                            {(byte)ProjectContainerBroadcastItem.SceneUniqueID,scene.uniqueID},
                                             {(byte)ProjectContainerBroadcastItem.ContainerDataString,JsonConvert.SerializeObject(container.Serialize(), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })}
                                         };
                 HashSet<DSPeer> peers = new HashSet<DSPeer>();
-                foreach (Container targetContainer in scene.ContainerDictionary.Values)
+                foreach (Container targetContainer in scene.containerDictionary.Values)
                 {
-                    foreach (Soul targetSoul in targetContainer.SoulDictionary.Values)
+                    foreach (Soul targetSoul in targetContainer.soulDictionary.Values)
                     {
-                        peers.Add(targetSoul.SourceAnswer.Peer);
+                        peers.Add(targetSoul.sourceAnswer.peer);
                     }
                 }
-                if (scene.AdministratorPeer != null)
-                    peers.Add(scene.AdministratorPeer);
+                if (scene.administratorPeer != null)
+                    peers.Add(scene.administratorPeer);
                 server.Broadcast(peers.ToArray(), BroadcastType.ProjectContainer, parameter);
                 return true;
             }
@@ -121,7 +121,7 @@ namespace DSServer
             {
                 Scene targetScene = server.SceneDictionary[sceneUniqueID];
                 List<SerializableContainer> containerList = new List<SerializableContainer>();
-                foreach (Container container in targetScene.ContainerDictionary.Values)
+                foreach (Container container in targetScene.containerDictionary.Values)
                 {
                     containerList.Add(container.Serialize());
                 }
@@ -140,12 +140,11 @@ namespace DSServer
         {
             if (server.SceneDictionary.ContainsKey(sceneUniqueID))
             {
-                server.SceneDictionary[sceneUniqueID].SceneAdministratorUniqueID = administratorUniqueID;
-                server.SceneDictionary[sceneUniqueID].AdministratorPeer = this;
+                server.SceneDictionary[sceneUniqueID].SetAdministrator(administratorUniqueID, this);
                 server.SceneAdministratorDictionary.Add(administratorUniqueID, server.SceneDictionary[sceneUniqueID]);
 
                 List<SerializableContainer> containerList = new List<SerializableContainer>();
-                foreach (Container container in server.SceneDictionary[sceneUniqueID].ContainerDictionary.Values)
+                foreach (Container container in server.SceneDictionary[sceneUniqueID].containerDictionary.Values)
                 {
                     containerList.Add(container.Serialize());
                 }
@@ -162,7 +161,7 @@ namespace DSServer
         }
         private bool MoveTargetPosition_and_Broadcast(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ)
         {
-            if (server.SceneDictionary.ContainsKey(sceneUniqueID) && server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
+            if (server.SceneDictionary.ContainsKey(sceneUniqueID) && server.SceneDictionary[sceneUniqueID].containerDictionary.ContainsKey(containerUniqueID))
             {
                 Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
@@ -174,15 +173,15 @@ namespace DSServer
                                         };
                 Scene scene = server.SceneDictionary[sceneUniqueID];
                 List<DSPeer> peers = new List<DSPeer>();
-                foreach (Container targetContainer in scene.ContainerDictionary.Values)
+                foreach (Container targetContainer in scene.containerDictionary.Values)
                 {
-                    foreach (Soul targetSoul in targetContainer.SoulDictionary.Values)
+                    foreach (Soul targetSoul in targetContainer.soulDictionary.Values)
                     {
-                        peers.Add(targetSoul.SourceAnswer.Peer);
+                        peers.Add(targetSoul.sourceAnswer.peer);
                     }
                 }
-                if (scene.AdministratorPeer != null)
-                    peers.Add(scene.AdministratorPeer);
+                if (scene.administratorPeer != null)
+                    peers.Add(scene.administratorPeer);
                 server.Broadcast(peers.ToArray(), BroadcastType.SendMoveTargetPosition, parameter);
                 return true;
             }
@@ -193,29 +192,27 @@ namespace DSServer
         }
         private bool UpdateContainerPosition_and_Broadcast(int sceneUniqueID, int containerUniqueID, float positionX, float positionY, float positionZ, float eulerAngleY)
         {
-            if (server.SceneDictionary.ContainsKey(sceneUniqueID) && server.SceneDictionary[sceneUniqueID].ContainerDictionary.ContainsKey(containerUniqueID))
+            if (server.SceneDictionary.ContainsKey(sceneUniqueID) && server.SceneDictionary[sceneUniqueID].containerDictionary.ContainsKey(containerUniqueID))
             {
                 Scene scene = server.SceneDictionary[sceneUniqueID];
-                Container container = scene.ContainerDictionary[containerUniqueID];
-                container.PositionX = positionX;
-                container.PositionY = positionY;
-                container.PositionZ = positionZ;
-                container.EulerAngleY = eulerAngleY;
+                Container container = scene.containerDictionary[containerUniqueID];
+                container.UpdatePosition(positionX,positionY,positionZ);
+                container.UpdateEulerAngle(0, eulerAngleY,0);
                 Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
-                                            {(byte)ContainerPositionUpdateBroadcastItem.SceneUniqueID,scene.UniqueID},
-                                            {(byte)ContainerPositionUpdateBroadcastItem.ContainerUniqueID,container.UniqueID},
+                                            {(byte)ContainerPositionUpdateBroadcastItem.SceneUniqueID,scene.uniqueID},
+                                            {(byte)ContainerPositionUpdateBroadcastItem.ContainerUniqueID,container.uniqueID},
                                             {(byte)ContainerPositionUpdateBroadcastItem.PositionX,positionX},
                                             {(byte)ContainerPositionUpdateBroadcastItem.PositionY,positionY},
                                             {(byte)ContainerPositionUpdateBroadcastItem.PositionZ,positionZ},
                                             {(byte)ContainerPositionUpdateBroadcastItem.EulerAngleY,eulerAngleY}
                                         };
                 HashSet<DSPeer> peers = new HashSet<DSPeer>();
-                foreach (Container targetContainer in scene.ContainerDictionary.Values)
+                foreach (Container targetContainer in scene.containerDictionary.Values)
                 {
-                    foreach (Soul targetSoul in targetContainer.SoulDictionary.Values)
+                    foreach (Soul targetSoul in targetContainer.soulDictionary.Values)
                     {
-                        peers.Add(targetSoul.SourceAnswer.Peer);
+                        peers.Add(targetSoul.sourceAnswer.peer);
                     }
                 }
                 server.Broadcast(peers.ToArray(), BroadcastType.ContainerPositionUpdate, parameter);
@@ -234,7 +231,7 @@ namespace DSServer
                 Dictionary<byte, object> parameter = new Dictionary<byte, object>
                                         {
                                             {(byte)SendMessageBroadcastItem.ContainerUniqueID,containerUniqueID },
-                                            {(byte)SendMessageBroadcastItem.ContainerName,container.Name},
+                                            {(byte)SendMessageBroadcastItem.ContainerName,container.name},
                                             {(byte)SendMessageBroadcastItem.MessageLevel,level},
                                             {(byte)SendMessageBroadcastItem.Message,message}
                                         };
@@ -261,19 +258,19 @@ namespace DSServer
         }
         private bool DisconnectAsPlayer()
         {
-            if (Answer != null && server.AnswerDictionary.ContainsKey(Answer.UniqueID))
+            if (Answer != null && server.AnswerDictionary.ContainsKey(Answer.uniqueID))
             {
-                server.AnswerDictionary.Remove(Answer.UniqueID);
+                server.AnswerDictionary.Remove(Answer.uniqueID);
                 HashSet<int> soulUniqueIDList = new HashSet<int>();
                 HashSet<int> sceneUniqueIDList = new HashSet<int>();
                 HashSet<int> containerUniqueIDList = new HashSet<int>();
-                foreach (Soul soul in Answer.SoulDictionary.Values)
+                foreach (Soul soul in Answer.soulDictionary.Values)
                 {
-                    soulUniqueIDList.Add(soul.UniqueID);
-                    foreach (Container container in soul.ContainerDictionary.Values)
+                    soulUniqueIDList.Add(soul.uniqueID);
+                    foreach (Container container in soul.containerDictionary.Values)
                     {
-                        sceneUniqueIDList.Add(container.Location.UniqueID);
-                        containerUniqueIDList.Add(container.UniqueID);
+                        sceneUniqueIDList.Add(container.location.uniqueID);
+                        containerUniqueIDList.Add(container.uniqueID);
                     }
                 }
                 Dictionary<byte, object> parameter = new Dictionary<byte, object>
@@ -285,28 +282,28 @@ namespace DSServer
                 HashSet<DSPeer> peers = new HashSet<DSPeer>();
                 foreach (Answer answer in server.AnswerDictionary.Values)
                 {
-                    peers.Add(answer.Peer);
+                    peers.Add(answer.peer);
                 }
                 foreach (Scene scene in server.SceneAdministratorDictionary.Values)
                 {
-                    peers.Add(scene.AdministratorPeer);
+                    peers.Add(scene.administratorPeer);
                 }
                 server.Broadcast(peers.ToArray(), BroadcastType.Disconnect, parameter);
 
-                foreach (Soul soul in Answer.SoulDictionary.Values)
+                foreach (Soul soul in Answer.soulDictionary.Values)
                 {
-                    foreach (Container container in soul.ContainerDictionary.Values)
+                    foreach (Container container in soul.containerDictionary.Values)
                     {
-                        if (server.ContainerDictionary.ContainsKey(container.UniqueID))
+                        if (server.ContainerDictionary.ContainsKey(container.uniqueID))
                         {
-                            server.ContainerDictionary.Remove(container.UniqueID);
+                            server.ContainerDictionary.Remove(container.uniqueID);
                         }
-                        if (container.Location.ContainerDictionary.ContainsKey(container.UniqueID))
+                        if (container.location.containerDictionary.ContainsKey(container.uniqueID))
                         {
-                            container.Location.ContainerDictionary.Remove(container.UniqueID);
-                            int containerUniqueID = container.UniqueID;
+                            container.location.containerDictionary.Remove(container.uniqueID);
+                            int containerUniqueID = container.uniqueID;
                             string[] updateItems = { "PositionX", "PositionY", "PositionZ", "EulerAngleY" };
-                            object[] updateValues = { container.PositionX, container.PositionY, container.PositionZ, container.EulerAngleY };
+                            object[] updateValues = { container.positionX, container.positionY, container.positionZ, container.eulerAngleY };
                             string table = "container";
                             server.database.UpdateDataByUniqueID(containerUniqueID,updateItems,updateValues,table);
                         }
@@ -321,12 +318,11 @@ namespace DSServer
         }
         private bool DisconnectAsSceneAdministrator()
         {
-            var searchResult = server.SceneAdministratorDictionary.FirstOrDefault(pair => pair.Value.AdministratorPeer == this);
+            var searchResult = server.SceneAdministratorDictionary.FirstOrDefault(pair => pair.Value.administratorPeer == this);
             int administratorUniqueID = (searchResult.Value is Scene) ? searchResult.Key : -1;
             if (server.SceneAdministratorDictionary.ContainsKey(administratorUniqueID))
             {
-                server.SceneAdministratorDictionary[administratorUniqueID].SceneAdministratorUniqueID = 0;
-                server.SceneAdministratorDictionary[administratorUniqueID].AdministratorPeer = null;
+                server.SceneAdministratorDictionary[administratorUniqueID].SetAdministrator(administratorUniqueID, null);
                 server.SceneAdministratorDictionary.Remove(administratorUniqueID);
                 return true;
             }

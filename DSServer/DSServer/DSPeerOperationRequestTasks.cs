@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Photon.SocketServer;
-using DSDataStructure;
-using DSProtocol;
+using DSServerStructure;
+using DSCommunicationProtocol;
 using DSSerializable.CharacterStructure;
 using DSSerializable.WorldLevelStructure;
 using Newtonsoft.Json;
@@ -91,7 +91,7 @@ namespace DSServer
             else
             {
                 int answerUniqueID = (int)operationRequest.Parameters[(byte)GetSoulListParameterItem.AnswerUniqueID];
-                if (answerUniqueID != Answer.UniqueID)
+                if (answerUniqueID != Answer.uniqueID)
                 {
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode)
                     {
@@ -132,7 +132,7 @@ namespace DSServer
             else
             {
                 int soulUniqueID = (int)operationRequest.Parameters[(byte)GetContainerListParameterItem.SoulUniqueID];
-                if (!Answer.SoulDictionary.ContainsKey(soulUniqueID))
+                if (!Answer.soulDictionary.ContainsKey(soulUniqueID))
                 {
                     OperationResponse response = new OperationResponse(operationRequest.OperationCode)
                     {

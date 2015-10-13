@@ -4,6 +4,9 @@ using System.Text;
 using MySql.Data.MySqlClient;
 using System.Security.Cryptography;
 using DSSerializable.CharacterStructure;
+using System.Data;
+using Newtonsoft.Json;
+using DSObjectStructure;
 
 namespace DSServer
 {
@@ -307,7 +310,11 @@ namespace DSServer
                         List<SerializableSoul> soulList = new List<SerializableSoul>();
                         while(reader.Read())
                         {
-                            soulList.Add(new SerializableSoul(reader.GetInt32(0), reader.GetString(1)));
+                            soulList.Add(new SerializableSoul()
+                            {
+                                UniqueID = reader.GetInt32("UniqueID"),
+                                Name = reader.GetString("Name")
+                            });
                         }
                         return soulList;
                     }
@@ -330,7 +337,7 @@ namespace DSServer
                 if (connection.State == System.Data.ConnectionState.Closed)
                     connection.Open();
 
-                String sqlText = "SELECT UniqueID,Name,LocationUniqueID,PositionX,PositionY,PositionZ,EulerAngleY FROM container WHERE SoulUniqueID = @soulUniqueID";
+                String sqlText = "SELECT UniqueID,Name,LocationUniqueID,PositionX,PositionY,PositionZ,EulerAngleY,InventoryDataString FROM container WHERE SoulUniqueID = @soulUniqueID";
                 using (MySqlCommand cmd = new MySqlCommand(sqlText, connection))
                 {
                     cmd.Parameters.AddWithValue("@soulUniqueID", soulUniqueID);
@@ -339,7 +346,17 @@ namespace DSServer
                         List<SerializableContainer> containerList = new List<SerializableContainer>();
                         while (reader.Read())
                         {
-                            containerList.Add(new SerializableContainer(reader.GetInt32(0), reader.GetString(1), reader.GetInt32(2),reader.GetFloat(3),reader.GetFloat(4),reader.GetFloat(5),reader.GetFloat(6)));
+                            containerList.Add(new SerializableContainer()
+                            {
+                                UniqueID = reader.GetInt32("UniqueID"),
+                                Name = reader.GetString("Name"),
+                                LocationUniqueID = reader.GetInt32("LocationUniqueID"),
+                                PositionX = reader.GetFloat("PositionX"),
+                                PositionY = reader.GetFloat("PositionY"),
+                                PositionZ = reader.GetFloat("PositionZ"),
+                                EulerAngleY = reader.GetFloat("EulerAngleY"),
+                                Inventory = JsonConvert.DeserializeObject<Inventory>(reader.GetString("InventoryDataString"), new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto })
+                            });
                         }
                         return containerList;
                     }

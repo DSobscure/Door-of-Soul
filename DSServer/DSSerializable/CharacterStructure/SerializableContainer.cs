@@ -1,12 +1,13 @@
 ﻿using System;
 using Newtonsoft.Json;
+using DSObjectStructure;
 
 namespace DSSerializable.CharacterStructure
 {
     public class SerializableContainer
     {
         [JsonProperty("UniqueID")]
-        public int UniqueID { get; protected set; }
+        public int UniqueID { get; set; }
         [JsonProperty("Name")]
         public string Name { get; set; }
         [JsonProperty("LocationUniqueID")]
@@ -21,16 +22,7 @@ namespace DSSerializable.CharacterStructure
         [JsonProperty("EulerAngleY")]
         public float EulerAngleY { get; set; }
 
-
-        public SerializableContainer(int uniqueID, string name, int locationUniqueID, float postionX, float positionY, float positionZ, float eulerAngleY)
-        {
-            UniqueID = uniqueID;
-            Name = name;
-            LocationUniqueID = locationUniqueID;
-            PositionX = postionX;
-            PositionY = positionY;
-            PositionZ = positionZ;
-            EulerAngleY = eulerAngleY;
-        }
+        [JsonProperty("Inventory")]
+        public Inventory Inventory { get; set; }
     }
 }

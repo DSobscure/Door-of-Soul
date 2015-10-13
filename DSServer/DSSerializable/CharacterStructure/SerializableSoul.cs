@@ -9,12 +9,5 @@ namespace DSSerializable.CharacterStructure
         public int UniqueID { get; set; }
         [JsonProperty("Name")]
         public string Name { get; set; }
-
-        protected SerializableSoul() { }
-        public SerializableSoul(int uniqueID, string name)
-        {
-            UniqueID = uniqueID;
-            Name = name;
-        }
     }
 }

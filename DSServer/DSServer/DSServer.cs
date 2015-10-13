@@ -5,9 +5,9 @@ using Photon.SocketServer;
 using ExitGames.Logging;
 using ExitGames.Logging.Log4Net;
 using log4net.Config;
-using DSDataStructure.WorldLevelStructure;
-using DSDataStructure;
-using DSProtocol;
+using DSServerStructure.WorldLevelStructure;
+using DSServerStructure;
+using DSCommunicationProtocol;
 
 namespace DSServer
 {

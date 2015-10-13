@@ -11,12 +11,5 @@ namespace DSSerializable.CharacterStructure
         public string Name { get; set; }
         [JsonProperty("SoulLimit")]
         public int SoulLimit { get; set; }
-
-        public SerializableAnswer(int uniqueID, string name, int soulLimit)
-        {
-            UniqueID = uniqueID;
-            Name = name;
-            SoulLimit = soulLimit;
-        }
     }
 }
